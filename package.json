@@ -1,0 +1,23 @@
+{
+  "name": "full-backend-zero",
+  "version": "1.0.0",
+  "description": "hello",
+  "main": "sever.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start" : "node sever.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "(https://github.com/tue1501/node_js_mau.git)"
+  },
+  "keywords": [
+    "nodejs",
+    "react"
+  ],
+  "author": "hello",
+  "license": "ISC",
+  "dependencies": {
+    "express": "4.21.2"
+  }
+}
