@@ -1,33 +1,19 @@
-const { render } = require('ejs')
-const express = require('express')
-const path = require('path')
-require('dotenv').config()
-
-
-
-console.log("check env: ", process.env);
-
+import express from 'express';
+import dotenv from 'dotenv';
+import initAPiRouter from './route/product.js'; 
+import setupRoutes from './route/login.js'; 
+import Cart from './route/cart.js'; 
+import Buy from './route/buy.js'; 
+// import { route } from './route/web.js';
+dotenv.config();
 
 const app = express();
-const port = process.env.PORT;
-const hostname = process.env.HOST_NAME;
-
-
-app.set('views', path.join(__dirname, 'views'));
-app.set ('view engine', 'ejs')
-
-app.get('/', (req, res) => {
-  res.send('Hello World!')
+const PORT = process.env.PORT || 8080;
+app.use(express.json());
+initAPiRouter(app);  
+setupRoutes(app);
+Cart(app);
+Buy(app);
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-app.get('/sample', (req, res) => {
-  res.render('sample')
-});
-
-app.get('/abc', (req, res) => {
-  res.send('Hello World!')
-})
-
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
