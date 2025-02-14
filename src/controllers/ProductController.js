@@ -1,6 +1,178 @@
 // controllers/UserController.js
 import connection from '../config/database.js'
 
+// src/controllers/authController.js
+import twilio from 'twilio';
+// import connection from '../config/database.js';
+import dotenv from 'dotenv';
+import bcrypt from 'bcrypt';
+dotenv.config();
+
+// Cấu hình Twilio
+const accountSid = 'ACd576ebfaeb5e1897e45f828d5e514d58';
+const authToken = '0898157f2537208adc1de4649f217687';
+// const accountSid = process.env.TWILIO_ACCOUNT_SID;
+// const authToken = process.env.TWILIO_AUTH_TOKEN;
+const client = new twilio(accountSid, authToken);
+
+// Bộ nhớ tạm thời để lưu OTP (nên thay bằng Redis hoặc Database trong thực tế)
+const otpStore = new Map(); 
+
+const sendSms = async (req, res) => {
+    try {
+      const { sdt } = req.body; // Lấy số điện thoại từ request
+  
+      // Kiểm tra xem số điện thoại có được truyền vào không
+      if (!sdt) {
+        return res.status(400).json({ success: false, error: "Missing 'sdt' field" });
+      }
+  
+      // Truy vấn dữ liệu khách hàng từ cơ sở dữ liệu
+      const [rows] = await connection.query(
+        'SELECT * FROM khachhang WHERE sdt = ?',
+        [sdt]
+      );
+  
+      // Kiểm tra nếu không có dữ liệu trả về từ query
+      if (rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'User not found!' });
+      }
+  
+      // Định dạng số điện thoại với mã quốc gia +1 nếu cần
+      const to = sdt.startsWith('+1') ? sdt : '+1' + sdt;
+  
+      // Lưu số điện thoại vào session
+      req.session.phoneNumber = to;
+  
+      // Tạo mã OTP ngẫu nhiên 6 chữ số
+      const otp = Math.floor(100000 + Math.random() * 900000);
+  
+      // Lưu OTP vào bộ nhớ tạm thời (có thể sử dụng Redis hoặc Database thực tế)
+      otpStore.set(to, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+  
+      // Nội dung tin nhắn OTP
+      const messageBody = `Your verification code is: ${otp}. It will expire in 5 minutes.`;
+  
+      // Gửi OTP qua SMS
+      const message = await client.messages.create({
+        body: messageBody,
+        from: '+18286786443', // Số Twilio
+        to, // Số điện thoại đã định dạng
+      });
+  
+      return res.status(200).json({
+        success: true,
+        message: 'OTP sent successfully!',
+        sid: message.sid,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  };
+  
+// Xác thực OTP
+const verifyOtp = (req, res) => {
+try {
+    const { otp } = req.body;
+    const phoneNumber = req.session.phoneNumber; // Lấy số điện thoại từ session
+
+    if (!phoneNumber || !otp) {
+    return res.status(400).json({ success: false, error: "Missing 'phoneNumber' or 'otp' field" });
+    }
+
+    const storedOtpData = otpStore.get(phoneNumber);
+
+    if (!storedOtpData) {
+    return res.status(400).json({ success: false, error: "OTP expired or not found" });
+    }
+
+    if (storedOtpData.otp !== parseInt(otp, 10)) {
+    return res.status(400).json({ success: false, error: "Invalid OTP" });
+    }
+
+    if (Date.now() > storedOtpData.expiresAt) {
+    otpStore.delete(phoneNumber);
+    return res.status(400).json({ success: false, error: "OTP expired" });
+    }
+
+    // Xóa OTP khỏi bộ nhớ sau khi xác thực thành công
+    otpStore.delete(phoneNumber);
+
+    return res.status(200).json({
+    success: true,
+    message: "OTP verified successfully!",
+    });
+} catch (error) {
+    return res.status(500).json({
+    success: false,
+    error: error.message,
+    });
+}
+};
+
+// Đổi mật khẩu
+const changePassword = async (req, res) => {
+    try {
+      const { newPassword } = req.body;
+  
+      const phoneNumber = req.session.phoneNumber; // Lấy số điện thoại từ session
+  
+      if (!phoneNumber) {
+        return res.status(400).json({ success: false, error: "No phone number found in session" });
+      }
+  
+      let phoneNumberToQuery = phoneNumber.startsWith('+1') ? phoneNumber.slice(2) : phoneNumber;
+  
+      // Truy vấn cơ sở dữ liệu với số điện thoại đã được chỉnh sửa
+      const [rows] = await connection.query(
+        'SELECT * FROM khachhang WHERE sdt = ?',
+        [phoneNumberToQuery]
+      );
+  
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'User not found!' });
+      }
+  
+      const id = rows[0].idkhachhang;
+  
+      if (!newPassword) {
+        return res.status(400).json({ success: false, error: "Missing 'newPassword' field" });
+      }
+  
+      const saltRounds = 10;
+              const hashedmatkhau = await bcrypt.hash(newPassword, saltRounds);
+              // Cập nhật thông tin khách hàng
+              const query = `
+                  UPDATE khachhang 
+                  SET 
+                      matkhau = COALESCE(?, matkhau)
+                  WHERE idKhachHang = ?
+              `;
+              const [result] = await connection.execute(query, [
+                  hashedmatkhau || null,
+                  id,
+              ]);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+  
+      req.session.destroy(); // Xóa số điện thoại khỏi session sau khi thay đổi mật khẩu
+  
+      return res.status(200).json({
+        success: true,
+        message: "Password changed successfully!",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  };  
+  
 
 const getAllproduct = async (req, res) => {
     try {
@@ -17,6 +189,8 @@ const getAllproduct = async (req, res) => {
         });
     }
 };
+
+
 
 
 const producttype = async (req, res) => {
@@ -196,5 +370,5 @@ const getProductById = async (req, res) => {
 
 // Xuất khẩu hàm getAllUsers
 export default {
-    getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType,getProductById
+    getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType,getProductById,sendSms,verifyOtp,changePassword
 };

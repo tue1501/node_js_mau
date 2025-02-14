@@ -4,12 +4,25 @@ import initAPiRouter from './route/product.js';
 import setupRoutes from './route/login.js'; 
 import Cart from './route/cart.js'; 
 import Buy from './route/buy.js'; 
-// import { route } from './route/web.js';
+import session  from 'express-session';
+// import { route } from './route/web.js'
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 app.use(express.json());
+
+app.use(session({
+    secret: 'PETLAND', // Khóa bí mật để mã hóa session
+    resave: false,             // Không lưu lại session nếu không thay đổi
+    saveUninitialized: true,   // Lưu session ngay cả khi chưa có thay đổi
+    cookie: {
+      httpOnly: true,          // Cookie chỉ có thể được truy cập bởi server
+      secure: false,           // Đặt true nếu đang sử dụng https
+      maxAge: 3600000,         // Thời gian session hết hạn (1 giờ)
+    }
+  }));
+
 initAPiRouter(app);  
 setupRoutes(app);
 Cart(app);

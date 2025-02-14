@@ -263,28 +263,29 @@ const discountbyid = async (req, res) => {
     const { id } = req.params; // ID của khách hàng
 
     try {
+        const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' '); // Lấy thời gian hiện tại
+
         // Truy vấn tất cả giảm giá của khách hàng, kết hợp với thông tin từ bảng `giamgia`
         const [discounts] = await connection.execute(
             `SELECT g.tengiamgia, g.ngaybatdau, g.ngayketthuc, g.mota, ct.trangthai
              FROM chitietgiamgia ct
              JOIN giamgia g ON ct.idGiamGia = g.idGiamGia
-             WHERE ct.idKhachHang = ?`,
-            [id]
+             WHERE ct.idKhachHang = ? AND g.ngayketthuc >= ?`,
+            [id, currentDate]
         );
 
-        // Kiểm tra nếu không có giảm giá nào
+        // Kiểm tra nếu không có giảm giá nào hợp lệ
         if (discounts.length === 0) {
-            return res.status(404).json({ message: 'No discounts found for this customer' });
+            return res.status(404).json({ message: 'No valid discounts found for this customer' });
         }
 
-        // Trả về danh sách các mã giảm giá
+        // Trả về danh sách các mã giảm giá hợp lệ
         return res.status(200).json({ data: discounts });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Server error', error });
     }
 };
-
 
 
 // Xuất khẩu hàm getAllUsers
