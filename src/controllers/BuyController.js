@@ -1,21 +1,82 @@
+import axios from 'axios';
 import connection from '../config/database.js';  // Đảm bảo bạn có kết nối với cơ sở dữ liệu
+import crypto from 'crypto';  
+// Hàm thanh toán MoMo
+const payment = async (req, res, orderId, totalAmount, orderDescription) => {
+    var accessKey = 'F8BBA842ECF85';
+    var secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
+    var partnerCode = 'MOMO';
+    var redirectUrl = 'http://localhost:8080/api/products';
+    var ipnUrl = 'https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b';
+    var requestType = "payWithMethod";
+    var orderInfo = orderDescription || 'pay with MoMo';  // Sử dụng mô tả đơn hàng truyền vào
+    var amount = totalAmount.toString();  // Chuyển tổng tiền thành chuỗi
+    var partnerName = "Test";
+    var storeId = "MomoTestStore";
+    var orderId = partnerCode + new Date().getTime();  // Ví dụ: MOMO1553512345678
+    var requestId = orderId;  // Sử dụng orderId làm requestId
+    var extraData = '';
+    var orderGroupId = '';
+    var autoCapture = true;
+    var lang = 'vi';
 
+    var rawSignature = "accessKey=" + accessKey + "&amount=" + amount + "&extraData=" + extraData + "&ipnUrl=" + ipnUrl + "&orderId=" + orderId + "&orderInfo=" + orderInfo + "&partnerCode=" + partnerCode + "&redirectUrl=" + redirectUrl + "&requestId=" + requestId + "&requestType=" + requestType;
 
-const Pay = async (req, res) => {
-    const { idkhachhang, idsanpham, note, iddiscount, quantity,paymentMethod  } = req.body;
+    var signature = crypto.createHmac('sha256', secretKey)
+        .update(rawSignature)
+        .digest('hex');
+    const requestBody = JSON.stringify({
+        partnerCode: partnerCode,
+        partnerName: partnerName,
+        storeId: storeId,
+        requestId: requestId,
+        amount: amount,
+        orderId: orderId,
+        orderInfo: orderInfo,
+        redirectUrl: redirectUrl,
+        ipnUrl: ipnUrl,
+        lang: lang,
+        requestType: requestType,
+        autoCapture: autoCapture,
+        extraData: extraData,
+        orderGroupId: orderGroupId,
+        signature: signature
+    });
+
+    const options = {
+        method: 'POST',
+        url: 'https://test-payment.momo.vn/v2/gateway/api/create',
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(requestBody)
+        },
+        data: requestBody
+    }
 
     try {
-        // Kiểm tra dữ liệu nhập vào
+        let result = await axios(options);
+        return res.status(200).json(result.data);
+    } catch (error) {
+        return res.status(500).json({
+            statuscode: 500,
+            message: "server err"
+        });
+    }
+};
+
+// Hàm Pay để xử lý đơn hàng và phương thức thanh toán
+const Pay = async (req, res) => {
+    const { idkhachhang, idsanpham, note, iddiscount, quantity, paymentMethod } = req.body;
+
+    try {
         if (!Array.isArray(idsanpham) || idsanpham.length === 0 || !Array.isArray(quantity) || quantity.length !== idsanpham.length) {
             return res.status(400).json({ message: 'Invalid products or quantities provided' });
         }
 
-        // Kiểm tra phuong thức thanh toán
-        if (!['COD', 'VNPay'].includes(paymentMethod)) {
+        if (!['COD', 'VNPay', 'MoMo'].includes(paymentMethod)) {
             return res.status(400).json({ message: 'Invalid payment method' });
         }
 
-        // Truy vấn thông tin khách hàng
         const [customer] = await connection.execute(
             'SELECT hoten, sdt FROM khachhang WHERE idKhachHang = ?',
             [idkhachhang]
@@ -25,9 +86,8 @@ const Pay = async (req, res) => {
             return res.status(404).json({ message: 'Customer not found' });
         }
 
-        const { hoten: customerName, sdt: customerPhone , diachi : customerAddress } = customer[0];
-        
-        // Kiểm tra xem khách hàng có thể sử dụng mã giảm giá không
+        const { hoten: customerName, sdt: customerPhone, diachi: customerAddress } = customer[0];
+
         if (iddiscount) {
             const [discountDetails] = await connection.execute(
                 'SELECT * FROM chitietgiamgia WHERE idKhachHang = ? AND idGiamGia = ? AND trangthai = 0',
@@ -39,22 +99,19 @@ const Pay = async (req, res) => {
             }
         }
 
-        // Truy vấn giá các sản phẩm
         const placeholders = idsanpham.map(() => '?').join(',');
         const [products] = await connection.execute(
             `SELECT idSanPham, tensp, gia FROM sanpham WHERE idSanPham IN (${placeholders})`,
             idsanpham
         );
 
-        // Tính tổng giá dựa trên số lượng
         let total = 0;
         for (let i = 0; i < products.length; i++) {
             const product = products[i];
             const productQuantity = quantity[idsanpham.indexOf(product.idSanPham)] || 1;
             total += product.gia * productQuantity;
         }
-        
-        // Kiểm tra và áp dụng giảm giá nếu có
+
         if (iddiscount) {
             const [discount] = await connection.execute(
                 'SELECT * FROM giamgia WHERE idGiamGia = ?',
@@ -62,54 +119,44 @@ const Pay = async (req, res) => {
             );
 
             if (discount.length > 0) {
-                const discountType = discount[0].danggiamgia; // 'percent' hoặc 'amount'
-                const discountValue = discount[0].giamgia;  // Giá trị giảm giá
-                const discountmax = discount[0].giamax;  // Giảm giá tối đa
-                const discountmin = discount[0].giamin;  // Giảm giá tối thiểu
-    
-                let discountAmount = 0;  // Khởi tạo biến giảm giá
-    
-                // Giảm giá theo phần trăm
+                const discountType = discount[0].danggiamgia; 
+                const discountValue = discount[0].giamgia;
+                const discountmax = discount[0].giamax; 
+                const discountmin = discount[0].giamin; 
+
+                let discountAmount = 0;
+
                 if (discountType === 'percent') {
                     if (total >= discountmin) {
-                        discountAmount = total * (discountValue / 100);  // Giảm theo phần trăm
-        
-                        // Kiểm tra nếu giá trị giảm giá không vượt quá mức tối đa
+                        discountAmount = total * (discountValue / 100);
+
                         if (discountAmount > discountmax) {
-                            discountAmount = discountmax;  // Giảm giá không được vượt quá discountmax
+                            discountAmount = discountmax;
                         }
-        
-                        total -= discountAmount;  // Trừ giảm giá từ tổng
+
+                        total -= discountAmount;
                     }
                 } else if (discountType === 'amount') {
-                    // Giảm giá theo số tiền cố định, chỉ áp dụng nếu tổng >= discountmin
                     if (total >= discountmin) {
-                        total -= discountValue;  // Trừ số tiền giảm giá từ tổng
+                        total -= discountValue;
                     }
                 }
-    
-                // Đảm bảo tổng tiền không âm
+
                 if (total < 0) total = 0;
             }
         }
 
-        // Lấy thời gian hiện tại
         const now = new Date();
-
-        // Thêm đơn hàng vào cơ sở dữ liệu
         const ttCod = paymentMethod === 'COD' ? 1 : 0;
         const ttOnline = paymentMethod === 'VNPay' ? 1 : 0;
 
-        // Thêm đơn hàng
         const [orderResult] = await connection.query(
             'INSERT INTO donhang (idkhachhang, tenkh, sdtkh, ngaytao, ngaygiaohang, ghichu, idGiamGia, tt_cod, noinhan, tt_online, trangthai, tongtien) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, 0, ?)',
             [idkhachhang, customerName, customerPhone, now, note, iddiscount, ttCod, customerAddress, ttOnline, total]
         );
 
-        // Lấy ID của đơn hàng vừa được thêm
         const orderId = orderResult.insertId;
 
-        // Thêm chi tiết đơn hàng vào cơ sở dữ liệu
         const detailsPromises = idsanpham.map((productId, index) => {
             const productQuantity = quantity[index];
             return connection.query(
@@ -118,10 +165,8 @@ const Pay = async (req, res) => {
             );
         });
 
-        // Chờ cho tất cả chi tiết đơn hàng được thêm vào
         await Promise.all(detailsPromises);
 
-        // Cập nhật trạng thái giảm giá thành 1 sau khi sử dụng
         if (iddiscount) {
             await connection.execute(
                 'UPDATE chitietgiamgia SET trangthai = 1 WHERE idKhachHang = ? AND idGiamGia = ?',
@@ -129,35 +174,34 @@ const Pay = async (req, res) => {
             );
         }
 
-        // Truy vấn chi tiết đơn hàng vừa thêm
         const [orderDetails] = await connection.execute(
             'SELECT c.idSanPham, s.tensp, c.sl, s.gia FROM chitietdonhang c JOIN sanpham s ON c.idSanPham = s.idSanPham WHERE c.idDonhang = ?',
             [orderId]
         );
 
-        // Trả về toàn bộ thông tin đơn hàng
-        return res.status(200).json({
-            message: 'Order placed successfully',
-            order: {
-                orderId,
-                customerName,
-                customerPhone,
-                products: orderDetails,
-                total,
-                note
-            },
-        });
+        // Gọi hàm thanh toán MoMo và truyền mã đơn hàng và mô tả
+        if (paymentMethod === 'MoMo') {
+            return payment(req, res, orderId, total, note);  // Truyền mã đơn hàng, tổng tiền và mô tả đơn hàng
+        } else {
+            return res.status(200).json({
+                message: 'Order placed successfully',
+                order: {
+                    orderId,
+                    customerName,
+                    customerPhone,
+                    products: orderDetails,
+                    total,
+                    note
+                },
+            });
+        }
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Server error', error });
     }
 };
 
-
-
-
-
-
 export default {
-    Pay
+    Pay,
+    payment
 };

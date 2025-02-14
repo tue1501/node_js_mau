@@ -5,6 +5,7 @@ import setupRoutes from './route/login.js';
 import Cart from './route/cart.js'; 
 import Buy from './route/buy.js'; 
 import session  from 'express-session';
+import OrderRoutes from './route/order.js';
 // import { route } from './route/web.js'
 dotenv.config();
 
@@ -27,6 +28,7 @@ initAPiRouter(app);
 setupRoutes(app);
 Cart(app);
 Buy(app);
+OrderRoutes(app);
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
