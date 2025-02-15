@@ -21,7 +21,9 @@ const authenticateJWT = (req, res, next) => {
         req.user = decoded;  // Gán thông tin người dùng vào req.user để sử dụng trong các route
         next();  // Tiếp tục xử lý yêu cầu
     } catch (err) {
+
         return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+        
     }
 };
 
