@@ -6,10 +6,9 @@ import Cart from './route/cart.js';
 import Buy from './route/buy.js'; 
 import session  from 'express-session';
 import OrderRoutes from './route/order.js';
-import { DiffieHellmanGroup } from 'crypto';
 // import { route } from './route/web.js'
 dotenv.config();
-DiffieHellmanGroup
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 app.use(express.json());
@@ -30,7 +29,6 @@ setupRoutes(app);
 Cart(app);
 Buy(app);
 OrderRoutes(app);
-
 
 
 
