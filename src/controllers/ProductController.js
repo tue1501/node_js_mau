@@ -42,13 +42,13 @@ const sendSms = async (req, res) => {
       const to = sdt.startsWith('+1') ? sdt : '+1' + sdt;
   
       // Lưu số điện thoại vào session
-      req.session.phoneNumber = to;
+      req.session.phoneNumber = sdt;
   
       // Tạo mã OTP ngẫu nhiên 6 chữ số
       const otp = Math.floor(100000 + Math.random() * 900000);
   
       // Lưu OTP vào bộ nhớ tạm thời (có thể sử dụng Redis hoặc Database thực tế)
-      otpStore.set(to, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+      otpStore.set(sdt, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
   
       // Nội dung tin nhắn OTP
       const messageBody = `Your verification code is: ${otp}. It will expire in 5 minutes.`;
@@ -119,28 +119,30 @@ const changePassword = async (req, res) => {
       const { newPassword } = req.body;
   
       const phoneNumber = req.session.phoneNumber; // Lấy số điện thoại từ session
-  
+
+
       if (!phoneNumber) {
         return res.status(400).json({ success: false, error: "No phone number found in session" });
-      }
-  
-      let phoneNumberToQuery = phoneNumber.startsWith('+1') ? phoneNumber.slice(2) : phoneNumber;
-  
+      }  
       // Truy vấn cơ sở dữ liệu với số điện thoại đã được chỉnh sửa
       const [rows] = await connection.query(
-        'SELECT * FROM khachhang WHERE sdt = ?',
-        [phoneNumberToQuery]
+        'SELECT idKhachHang FROM khachhang WHERE sdt = ?',
+        [phoneNumber]
       );
   
-      if (rows.length === 0) {
-        return res.status(404).json({ message: 'User not found!' });
-      }
+    if (rows.length === 0) {
+    return res.status(404).json({ message: 'User not found!' });
+    }
   
-      const id = rows[0].idkhachhang;
-  
-      if (!newPassword) {
-        return res.status(400).json({ success: false, error: "Missing 'newPassword' field" });
-      }
+    const id = rows[0]?.idKhachHang;
+
+    if (!id) {
+        return res.status(400).json({ success: false, error: "Invalid customer ID" });
+    }
+
+    if (!newPassword) {
+    return res.status(400).json({ success: false, error: "Missing 'newPassword' field" });
+    }
   
       const saltRounds = 10;
               const hashedmatkhau = await bcrypt.hash(newPassword, saltRounds);

@@ -1,5 +1,6 @@
 import express from "express";
 import CartController from '../controllers/CartController.js';
+import authenticateJWT from '../middleware/authenticate.js';
 
 const router = express.Router();
 const Cart = (app) => {
@@ -8,9 +9,9 @@ const Cart = (app) => {
     // Bớt sản phẩm vào giỏ hàng
     router.post('/decrease', CartController.decreaseQuantity);
     // Lấy giỏ hàng của người dùng
-    router.get('/cart/:idkhachhang', CartController.getCart);
+    router.get('/cart/:idkhachhang',authenticateJWT, CartController.getCart);
     // Xóa sản phẩm khỏi giỏ hàng
-    router.delete('/remove-from-cart/:idgiohang', CartController.removeFromCart);
+    router.delete('/remove-from-cart/:idgiohang',authenticateJWT, CartController.removeFromCart);
 
     return app.use('/api', router);
 }

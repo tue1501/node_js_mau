@@ -1,19 +1,20 @@
 import express from "express";
 import ProductController from '../controllers/ProductController.js';
+import authenticateJWT from '../middleware/authenticate.js';
 // import AuthController from '../controllers/AuthController.js';
 const router = express.Router();
 const initAPiRouter = (app) => {
-    router.get('/product',ProductController.getAllproduct)
+    router.get('/product',authenticateJWT,ProductController.getAllproduct)
 
-    router.get('/producttype',ProductController.producttype)
+    router.get('/producttype',authenticateJWT,ProductController.producttype)
 
-    router.get('/producttypedetails/',ProductController.producttypedetails)
+    router.get('/producttypedetails/',authenticateJWT,ProductController.producttypedetails)
 
-    router.get('/getallProductsByDetailType', ProductController.allgetProductsByDetailType);
+    router.get('/getallProductsByDetailType',authenticateJWT, ProductController.allgetProductsByDetailType);
 
-    router.get('/getProductsByDetailType/:id', ProductController.getProductsByDetailType);
+    router.get('/getProductsByDetailType/:id',authenticateJWT, ProductController.getProductsByDetailType);
 
-    router.get('/getProductById/:id', ProductController.getProductById);
+    router.get('/getProductById/:id',authenticateJWT, ProductController.getProductById);
 
     // router.get('/otp',AuthController.otp);
 

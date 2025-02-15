@@ -42,7 +42,14 @@ const deleteorder = async (req, res) => {
         if (!iddonhang) {
             return res.status(400).json({ message: 'No fields to update' });
         }
-
+        const [rows] = await connection.query(
+            'SELECT idKhachHang FROM donhang WHERE idDonHang = ? AND idKhachHang = ?',
+            [iddonhang, id]
+        );
+        if (rows.length !== 1) {
+            return res.status(404).json({ message: 'Order not found or does not belong to this customer!' });
+        }
+                
         // Cập nhật thông tin khách hàng
         const query = `
             UPDATE donhang 

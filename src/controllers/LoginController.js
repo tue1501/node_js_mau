@@ -1,9 +1,9 @@
 // controllers/UserController.js
-
-
+import jwt from 'jsonwebtoken';
 import connection from '../config/database.js'
 import bcrypt from 'bcrypt';
-
+import dotenv from 'dotenv';
+dotenv.config();
 
 const Login = async (req, res) => {
     try {
@@ -25,8 +25,12 @@ const Login = async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials!' });
         }
-
-        return res.status(200).json({ message: 'Login successful!', user });
+        const token = jwt.sign(
+            { id: user.idKhachHang },  // Dữ liệu trong token
+            process.env.JWT_SECRET,  // Khóa bí mật
+            { expiresIn: '7d' }  // Hết hạn sau 7 ngày
+        );
+        return res.status(200).json({ message: 'Login successful!', token });
     } catch (error) {
         console.error('Error logging in:', error);
         return res.status(500).json({ message: 'Error logging in.' });
@@ -34,9 +38,13 @@ const Login = async (req, res) => {
 };
 
 
-
 const Register = async (req, res) => {
     const { hoten, sdt, matkhau,email } = req.body;
+    const token = req.header('Authorization');
+
+    if (!token) {
+        return res.status(403).json({ message: 'Access denied. No token provided.' });
+    }
 
     try {
         // Validate input data
@@ -159,7 +167,7 @@ const password = async (req, res) => {
         console.error('Error password :', error);
         return res.status(500).json({ message: 'password error' });
     }
-};
+}; 
 
 
 const resertpass = async (req, res) => {
@@ -286,9 +294,31 @@ const discountbyid = async (req, res) => {
         return res.status(500).json({ message: 'Server error', error });
     }
 };
+import { jwtBlacklist } from '../middleware/jwtBlacklist.js';  // Import blacklist từ jwtBlacklist.js
 
+dotenv.config();
+
+const logout = (req, res) => {
+    const token = req.header('Authorization')?.split(' ')[1];  // Lấy token từ header Authorization
+
+    if (!token) {
+        return res.status(400).json({ success: false, message: 'Token missing' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Giải mã token để lấy thông tin người dùng
+
+        // Thêm token vào blacklist
+        jwtBlacklist.add(token);  // Đưa token vào blacklist để không sử dụng lại
+
+        res.clearCookie('token');  // Nếu bạn dùng cookie để lưu token
+        return res.status(200).json({ success: true, message: 'Logged out successfully' });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
 
 // Xuất khẩu hàm getAllUsers
-export default {
-    Register,Login,informations,addaddress,password,resertpass,adddiscount,discountbyid
+export default { 
+    Register,Login,informations,addaddress,password,resertpass,adddiscount,discountbyid,logout,
 };
