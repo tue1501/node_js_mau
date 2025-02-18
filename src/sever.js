@@ -9,7 +9,7 @@ import OrderRoutes from './route/order.js';
 // import { route } from './route/web.js'
 dotenv.config();
 
-const app = express();
+const app = express(); 
 const PORT = process.env.PORT || 8080;
 app.use(express.json());
 
@@ -29,7 +29,6 @@ setupRoutes(app);
 Cart(app);
 Buy(app);
 OrderRoutes(app);
-
 
 
 

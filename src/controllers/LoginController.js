@@ -42,10 +42,6 @@ const Register = async (req, res) => {
     const { hoten, sdt, matkhau,email } = req.body;
     const token = req.header('Authorization');
 
-    if (!token) {
-        return res.status(403).json({ message: 'Access denied. No token provided.' });
-    }
-
     try {
         // Validate input data
         if (!hoten || !sdt || !matkhau || !email) {
