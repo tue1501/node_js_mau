@@ -47,7 +47,16 @@ const Register = async (req, res) => {
         if (!hoten || !sdt || !matkhau || !confirmMatkhau || !email) {
             return res.status(400).json({ message: 'All fields are required' });
         }
+        const passwordRegex = /^.{8,}$/;  // Mật khẩu phải có ít nhất 8 ký tự
+        if (!passwordRegex.test(matkhau)) {
+            return res.status(400).json({ message: "Password must be at least 8 characters long." });        
+        }
 
+        // Kiểm tra số điện thoại phải đủ 10 ký tự
+        const phoneRegex = /^[0-9]{10}$/;  // Kiểm tra số điện thoại có đúng 10 chữ số
+        if (!phoneRegex.test(sdt)) {
+            return res.status(400).json({ message: "Phone number must be exactly 10 digits." });
+        }
         // Kiểm tra xác nhận mật khẩu
         if (matkhau !== confirmMatkhau) {
             return res.status(400).json({ message: 'Password confirmation does not match' });
@@ -68,7 +77,6 @@ const Register = async (req, res) => {
             'INSERT INTO khachhang (hoten, sdt, matkhau, gmail) VALUES (?, ?, ?, ?)',
             [hoten, sdt, hashedmatkhau, email]
         );
-
         res.status(201).json({
             message: 'Registration successful',
             user: {
