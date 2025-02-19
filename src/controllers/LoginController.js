@@ -38,30 +38,35 @@ const Login = async (req, res) => {
 };
 
 
+
 const Register = async (req, res) => {
-    const { hoten, sdt, matkhau,email } = req.body;
-    const token = req.header('Authorization');
+    const { hoten, sdt, matkhau, confirmMatkhau, email } = req.body;
 
     try {
-        // Validate input data
-        if (!hoten || !sdt || !matkhau || !email) {
+        // Kiểm tra xem các trường có đầy đủ không
+        if (!hoten || !sdt || !matkhau || !confirmMatkhau || !email) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
-        // Check if the phone number already exists
+        // Kiểm tra xác nhận mật khẩu
+        if (matkhau !== confirmMatkhau) {
+            return res.status(400).json({ message: 'Password confirmation does not match' });
+        }
+
+        // Kiểm tra số điện thoại đã tồn tại chưa
         const [rows] = await connection.query('SELECT idKhachHang FROM khachhang WHERE sdt = ?', [sdt]);
         if (rows.length > 0) {
             return res.status(400).json({ message: 'Phone number is already in use' });
         }
 
-        // Hash the password
+        // Băm mật khẩu
         const saltRounds = 10;
         const hashedmatkhau = await bcrypt.hash(matkhau, saltRounds);
 
-        // Save the user to the database
+        // Lưu vào cơ sở dữ liệu
         const [result] = await connection.query(
-            'INSERT INTO khachhang (hoten, sdt, matkhau,gmail) VALUES (?, ?, ?, ?)',
-            [hoten, sdt, hashedmatkhau,email]
+            'INSERT INTO khachhang (hoten, sdt, matkhau, gmail) VALUES (?, ?, ?, ?)',
+            [hoten, sdt, hashedmatkhau, email]
         );
 
         res.status(201).json({
