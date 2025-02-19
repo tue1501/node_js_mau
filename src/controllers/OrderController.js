@@ -1,4 +1,5 @@
 import connection from '../config/database.js'
+import jwt from 'jsonwebtoken';
 const orderbyid = async (req, res) => {
     const { id } = req.params; // ID của khách hàng
     try {
@@ -72,7 +73,7 @@ const deleteorder = async (req, res) => {
                 if (id !== loggedInUserId.toString()) {
                     return res.status(401).json({ message: 'You have been logged out due to invalid access' });
                 }
-                
+
         if (!id) {
             return res.status(400).json({ message: 'Customer ID is required' });
         }

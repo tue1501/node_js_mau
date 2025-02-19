@@ -1,6 +1,7 @@
 import axios from 'axios';
 import connection from '../config/database.js';  // Đảm bảo bạn có kết nối với cơ sở dữ liệu
 import crypto from 'crypto';  
+import jwt from 'jsonwebtoken';
 // Hàm thanh toán MoMo
 const payment = async (req, res, orderId, totalAmount, orderDescription) => {
     var accessKey = 'F8BBA842ECF85';

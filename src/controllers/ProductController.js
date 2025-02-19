@@ -1,6 +1,6 @@
 // controllers/UserController.js
 import connection from '../config/database.js'
-
+import jwt from 'jsonwebtoken';
 // src/controllers/authController.js
 import twilio from 'twilio';
 // import connection from '../config/database.js';
@@ -58,12 +58,14 @@ const sendSms = async (req, res) => {
         body: messageBody,
         from: '+18286786443', // Số Twilio
         to, // Số điện thoại đã định dạng
+        otp,
       });
   
       return res.status(200).json({
         success: true,
         message: 'OTP sent successfully!',
         sid: message.sid,
+        to,
       });
     } catch (error) {
       return res.status(500).json({
