@@ -97,12 +97,20 @@ const informations = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const token = req.headers['authorization'];
+        const authHeader = req.headers['authorization'];
+        if (!authHeader) {
+            return res.status(401).json({ message: 'No token provided' });
+        }
 
-        // Giải mã token để lấy ID người dùng đã đăng nhập
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+        // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
+        const token = authHeader.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'Invalid token format' });
+        }
 
-        const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+        // 3️ Giải mã token để lấy ID người dùng
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
 
         // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
         if (id !== loggedInUserId.toString()) {
@@ -128,11 +136,20 @@ const addaddress = async (req, res) => {
     const { id } = req.params;
     const { diachi } = req.body; // Lấy thông tin từ body
     try {
-        const token = req.headers['authorization'];
-        // Giải mã token để lấy ID người dùng đã đăng nhập
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+        const authHeader = req.headers['authorization'];
+        if (!authHeader) {
+            return res.status(401).json({ message: 'No token provided' });
+        }
 
-        const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+        // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
+        const token = authHeader.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'Invalid token format' });
+        }
+
+        // 3️ Giải mã token để lấy ID người dùng
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
 
         // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
         if (id !== loggedInUserId.toString()) {
@@ -208,11 +225,20 @@ const resertpass = async (req, res) => {
     const { matkhaucu, matkhau } = req.body;  // Lấy thông tin từ body
 
     try {
-        const token = req.headers['authorization'];
-        // Giải mã token để lấy ID người dùng đã đăng nhập
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+        const authHeader = req.headers['authorization'];
+        if (!authHeader) {
+            return res.status(401).json({ message: 'No token provided' });
+        }
 
-        const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+        // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
+        const token = authHeader.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'Invalid token format' });
+        }
+
+        // 3️ Giải mã token để lấy ID người dùng
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
 
         // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
         if (id !== loggedInUserId.toString()) {
@@ -271,11 +297,20 @@ const adddiscount = async (req, res) => {
     const { discountcode } = req.body; // ID của mã giảm giá được gửi từ client
 
     try {
-        const token = req.headers['authorization'];
-        // Giải mã token để lấy ID người dùng đã đăng nhập
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+        const authHeader = req.headers['authorization'];
+        if (!authHeader) {
+            return res.status(401).json({ message: 'No token provided' });
+        }
 
-        const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+        // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
+        const token = authHeader.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'Invalid token format' });
+        }
+
+        // 3️ Giải mã token để lấy ID người dùng
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
 
         // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
         if (id !== loggedInUserId.toString()) {
@@ -339,11 +374,20 @@ const discountbyid = async (req, res) => {
     const { id } = req.params; // ID của khách hàng
 
     try {
-        const token = req.headers['authorization'];
-        // Giải mã token để lấy ID người dùng đã đăng nhập
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+        const authHeader = req.headers['authorization'];
+        if (!authHeader) {
+            return res.status(401).json({ message: 'No token provided' });
+        }
 
-        const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+        // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
+        const token = authHeader.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'Invalid token format' });
+        }
+
+        // 3️ Giải mã token để lấy ID người dùng
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
 
         // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
         if (id !== loggedInUserId.toString()) {

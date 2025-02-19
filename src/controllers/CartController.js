@@ -36,14 +36,23 @@ const CartController = {
     },
     // Lấy giỏ hàng của người dùng
     async getCart(req, res) {
-        const { idkhachhang } = req.params;
+        const { id } = req.params;
         
         try {
-            const token = req.headers['authorization'];
-                    // Giải mã token để lấy ID người dùng đã đăng nhập
-                    const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+            const authHeader = req.headers['authorization'];
+                    if (!authHeader) {
+                        return res.status(401).json({ message: 'No token provided' });
+                    }
             
-                    const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+                    // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
+                    const token = authHeader.split(' ')[1];
+                    if (!token) {
+                        return res.status(401).json({ message: 'Invalid token format' });
+                    }
+            
+                    // 3️ Giải mã token để lấy ID người dùng
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                    const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
             
                     // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
                     if (id !== loggedInUserId.toString()) {
