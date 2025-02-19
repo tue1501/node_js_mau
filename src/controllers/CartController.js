@@ -6,6 +6,7 @@ const CartController = {
         const { idkhachhang, idsanpham } = req.body;
 
         try {
+            
             // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
             const [existingProduct] = await connection.query(
                 'SELECT * FROM giohang WHERE idkhachhang = ? AND idsanpham = ?',
@@ -38,6 +39,16 @@ const CartController = {
         const { idkhachhang } = req.params;
         
         try {
+            const token = req.headers['authorization'];
+                    // Giải mã token để lấy ID người dùng đã đăng nhập
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+            
+                    const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+            
+                    // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
+                    if (id !== loggedInUserId.toString()) {
+                        return res.status(401).json({ message: 'You have been logged out due to invalid access' });
+                    }
             // Lấy các sản phẩm trong giỏ hàng của người dùng
             const [cartItems] = await connection.query(
                 `SELECT c.idgiohanghang, c.idsanpham, c.sl, p.tensp, p.mausac, p.xuatxu, p.hinhanh, p.diemtb, p.gia, p.tonkho, p.mota

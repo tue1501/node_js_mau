@@ -23,7 +23,7 @@ const Login = async (req, res) => {
         const isMatch = await bcrypt.compare(matkhau, user.matkhau);
 
         if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid credentials!' });
+            return res.status(401).json({ message: 'wrong password!' });
         }
         const token = jwt.sign(
             { id: user.idKhachHang },  // Dữ liệu trong token
@@ -97,6 +97,17 @@ const informations = async (req, res) => {
     const { id } = req.params;
 
     try {
+        const token = req.headers['authorization'];
+
+        // Giải mã token để lấy ID người dùng đã đăng nhập
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+
+        const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+
+        // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
+        if (id !== loggedInUserId.toString()) {
+            return res.status(401).json({ message: 'You have been logged out due to invalid access' });
+        }
         // Lấy thông tin người dùng từ cơ sở dữ liệu
         const [rows] = await connection.query('SELECT idKhachHang, hoten, sdt,gmail FROM khachhang WHERE idKhachHang = ?', [id]);
 
@@ -117,6 +128,16 @@ const addaddress = async (req, res) => {
     const { id } = req.params;
     const { diachi } = req.body; // Lấy thông tin từ body
     try {
+        const token = req.headers['authorization'];
+        // Giải mã token để lấy ID người dùng đã đăng nhập
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+
+        const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+
+        // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
+        if (id !== loggedInUserId.toString()) {
+            return res.status(401).json({ message: 'You have been logged out due to invalid access' });
+        }
         // Kiểm tra nếu không có ID khách hàng
         if (!id) {
             return res.status(400).json({ message: 'Customer ID is required' });
@@ -187,6 +208,16 @@ const resertpass = async (req, res) => {
     const { matkhaucu, matkhau } = req.body;  // Lấy thông tin từ body
 
     try {
+        const token = req.headers['authorization'];
+        // Giải mã token để lấy ID người dùng đã đăng nhập
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+
+        const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+
+        // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
+        if (id !== loggedInUserId.toString()) {
+            return res.status(401).json({ message: 'You have been logged out due to invalid access' });
+        }
         // Kiểm tra nếu không có ID khách hàng
         if (!id) {
             return res.status(400).json({ message: 'Customer ID is required' });
@@ -240,6 +271,16 @@ const adddiscount = async (req, res) => {
     const { discountcode } = req.body; // ID của mã giảm giá được gửi từ client
 
     try {
+        const token = req.headers['authorization'];
+        // Giải mã token để lấy ID người dùng đã đăng nhập
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+
+        const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+
+        // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
+        if (id !== loggedInUserId.toString()) {
+            return res.status(401).json({ message: 'You have been logged out due to invalid access' });
+        }
         // Kiểm tra nếu không có ID khách hàng
         if (!id) {
             return res.status(400).json({ message: 'Customer ID is required' });
@@ -298,6 +339,16 @@ const discountbyid = async (req, res) => {
     const { id } = req.params; // ID của khách hàng
 
     try {
+        const token = req.headers['authorization'];
+        // Giải mã token để lấy ID người dùng đã đăng nhập
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+
+        const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+
+        // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
+        if (id !== loggedInUserId.toString()) {
+            return res.status(401).json({ message: 'You have been logged out due to invalid access' });
+        }
         const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' '); // Lấy thời gian hiện tại
 
         // Truy vấn tất cả giảm giá của khách hàng, kết hợp với thông tin từ bảng `giamgia`

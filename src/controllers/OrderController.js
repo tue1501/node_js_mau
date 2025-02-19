@@ -2,6 +2,16 @@ import connection from '../config/database.js'
 const orderbyid = async (req, res) => {
     const { id } = req.params; // ID của khách hàng
     try {
+        const token = req.headers['authorization'];
+                // Giải mã token để lấy ID người dùng đã đăng nhập
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
+        
+                const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+        
+                // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
+                if (id !== loggedInUserId.toString()) {
+                    return res.status(401).json({ message: 'You have been logged out due to invalid access' });
+                }
         const [orders] = await connection.execute
         (`SELECT iddonhang
             FROM donhang
@@ -34,7 +44,16 @@ const deleteorder = async (req, res) => {
     const { id } = req.params;
     const { iddonhang } = req.body; // Lấy thông tin từ body
     try {
+        const token = req.headers['authorization'];
+                // Giải mã token để lấy ID người dùng đã đăng nhập
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Sử dụng khóa bí mật của bạn
         
+                const loggedInUserId = decoded.id;  // ID người dùng đã đăng nhập từ token
+        
+                // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
+                if (id !== loggedInUserId.toString()) {
+                    return res.status(401).json({ message: 'You have been logged out due to invalid access' });
+                }
         if (!id) {
             return res.status(400).json({ message: 'Customer ID is required' });
         }
