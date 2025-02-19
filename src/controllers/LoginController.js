@@ -149,72 +149,90 @@ const addaddress = async (req, res) => {
     }
 };
 
-const password = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { matkhau } = req.body;
+// const password = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const { matkhau } = req.body; // Lấy thông tin tự body
+//         const [rows] = await connection.query(
+//             'SELECT * FROM khachhang WHERE idKhachHang = ?',
+//             [id]
+//         );
+        
+//         if (rows.length === 0) {
+//             return res.status(404).json({ message: 'User not found!' });
+//         }
 
+//         const user = rows[0];
+//         const isMatch = await bcrypt.compare(matkhau, user.matkhau);
 
-        const [rows] = await connection.query(
-            'SELECT * FROM khachhang WHERE idKhachHang = ?',
-            [id]
-        );
+//         const passwordRegex = /^.{8,}$/;  // Mật khẩu phải có ít nhất 8 ký tự
+//         if (!passwordRegex.test(matkhau)) {
+//             return res.status(400).json({ message: "Password must be at least 8 characters long." });        
+//         }
 
-        if (rows.length === 0) {
-            return res.status(404).json({ message: 'User not found!' });
-        }
+//         if (!isMatch) {
+//             return res.status(401).json({ message: 'wrong password!' });
+//         }
 
-        const user = rows[0];
-        const isMatch = await bcrypt.compare(matkhau, user.matkhau);
-
-        if (!isMatch) {
-            return res.status(401).json({ message: 'wrong password!' });
-        }
-
-        return res.status(200).json({ message: 'password correct!'});
-    } catch (error) {
-        console.error('Error password :', error);
-        return res.status(500).json({ message: 'password error' });
-    }
-}; 
+//         return res.status(200).json({ message: 'password correct!'});
+//     } catch (error) {
+//         console.error('Error password :', error);
+//         return res.status(500).json({ message: 'password error' });
+//     }
+// }; 
 
 
 const resertpass = async (req, res) => {
     const { id } = req.params;
-    const { matkhau } = req.body; // Lấy thông tin từ body
+    const { matkhaucu, matkhau } = req.body;  // Lấy thông tin từ body
+
     try {
         // Kiểm tra nếu không có ID khách hàng
         if (!id) {
             return res.status(400).json({ message: 'Customer ID is required' });
         }
+        const [rows] = await connection.execute(
+            'SELECT matkhau FROM khachhang WHERE idKhachHang = ?',
+            [id]
+        );
 
-        if (!matkhau) {
-            return res.status(400).json({ message: 'No fields to update' });
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Customer not found' });
         }
+
+        const isMatch = await bcrypt.compare(matkhaucu, rows[0].matkhau);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Old password is incorrect' });
+        }
+
+        if (!matkhaucu) {
+            return res.status(400).json({ message: 'Old password is required' });
+        }
+        
+        const passwordRegex = /^.{8,}$/;  // Mật khẩu phải có ít nhất 8 ký tự
+        if (!matkhau || !passwordRegex.test(matkhau)) {
+            return res.status(400).json({ message: 'Password must be at least 8 characters long.' });
+        }
+       
+        // Mã hóa mật khẩu mới
         const saltRounds = 10;
-        const hashedmatkhau = await bcrypt.hash(matkhau, saltRounds);
-        // Cập nhật thông tin khách hàng
-        const query = `
-            UPDATE khachhang 
-            SET 
-                matkhau = COALESCE(?, matkhau)
-            WHERE idKhachHang = ?
-        `;
-        const [result] = await connection.execute(query, [
-            hashedmatkhau || null,
-            id,
-        ]);
+        const hashedMatkhau = await bcrypt.hash(matkhau, saltRounds);
+
+        // Cập nhật mật khẩu mới vào cơ sở dữ liệu
+        const query = 'UPDATE khachhang SET matkhau = ? WHERE idKhachHang = ?';
+        const [result] = await connection.execute(query, [hashedMatkhau, id]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Customer not found' });
         }
 
-        return res.status(200).json({ message: 'password updated successfully' });
+        return res.status(200).json({ message: 'Password updated successfully' });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Error updating password', error });
     }
 };
+
 
 
 const adddiscount = async (req, res) => {
@@ -329,5 +347,5 @@ const logout = (req, res) => {
 
 // Xuất khẩu hàm getAllUsers
 export default { 
-    Register,Login,informations,addaddress,password,resertpass,adddiscount,discountbyid,logout,
+    Register,Login,informations,addaddress,resertpass,adddiscount,discountbyid,logout,
 };

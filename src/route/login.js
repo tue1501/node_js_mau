@@ -18,7 +18,7 @@ const setupRoutes = (app) => {
 
     router.put('/resertpass/:id',authenticateJWT, LoginController.resertpass);
     
-    router.post('/password/:id',authenticateJWT, LoginController.password);
+    // router.post('/password/:id',authenticateJWT, LoginController.password);
     
     router.post('/adddiscount/:id',authenticateJWT, LoginController.adddiscount);
     

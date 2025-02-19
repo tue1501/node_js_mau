@@ -121,9 +121,13 @@ const changePassword = async (req, res) => {
       const phoneNumber = req.session.phoneNumber; // Lấy số điện thoại từ session
 
 
-      if (!phoneNumber) {
+    if (!phoneNumber) {
         return res.status(400).json({ success: false, error: "No phone number found in session" });
-      }  
+    }  
+    const passwordRegex = /^.{8,}$/;  // Mật khẩu phải có ít nhất 8 ký tự
+    if (!passwordRegex.test(newPassword)) {
+        return res.status(400).json({ message: "Password must be at least 8 characters long." });        
+    }
       // Truy vấn cơ sở dữ liệu với số điện thoại đã được chỉnh sửa
       const [rows] = await connection.query(
         'SELECT idKhachHang FROM khachhang WHERE sdt = ?',
