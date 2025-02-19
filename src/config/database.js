@@ -7,7 +7,7 @@ const connection = mysql.createConnection({
     port: '23358',
     user: 'avnadmin',  // Thay đổi thành thông tin của bạn
     password: 'AVNS_9FCh7TMB3FGxqIgMOM2',  // Thay đổi mật khẩu nếu có
-    database: 'defaultdb'  // Thay đổi tên cơ sở dữ liệu
+    database: 'petland'  // Thay đổi tên cơ sở dữ liệu
 });
 
 export default connection.promise();  // Sử dụng promise để tương thích với async/await
