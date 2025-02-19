@@ -41,9 +41,6 @@ const sendSms = async (req, res) => {
       // Định dạng số điện thoại với mã quốc gia +1 nếu cần
       const to = sdt.startsWith('+1') ? sdt : '+1' + sdt;
   
-      // Lưu số điện thoại vào session
-      req.session.phoneNumber = sdt;
-  
       // Tạo mã OTP ngẫu nhiên 6 chữ số
       const otp = Math.floor(100000 + Math.random() * 900000);
   
@@ -52,13 +49,17 @@ const sendSms = async (req, res) => {
   
       // Nội dung tin nhắn OTP
       const messageBody = `Your verification code is: ${otp}. It will expire in 5 minutes.`;
-  
+
       // Gửi OTP qua SMS
+    const token = jwt.sign(
+        { sdt },  // Payload chứa số điện thoại
+        process.env.JWT_SECRET, // Mã bí mật của bạn (đặt trong file .env)
+        { expiresIn: '10m' }    // Token hết hạn sau 10 phút (hoặc thời gian tùy chỉnh)
+    );
       const message = await client.messages.create({
         body: messageBody,
         from: '+18286786443', // Số Twilio
-        to, // Số điện thoại đã định dạng
-        otp,
+        to,
       });
   
       return res.status(200).json({
@@ -66,6 +67,7 @@ const sendSms = async (req, res) => {
         message: 'OTP sent successfully!',
         sid: message.sid,
         to,
+        token : token
       });
     } catch (error) {
       return res.status(500).json({
@@ -76,56 +78,90 @@ const sendSms = async (req, res) => {
   };
   
 // Xác thực OTP
-const verifyOtp = (req, res) => {
-try {
-    const { otp } = req.body;
-    const phoneNumber = req.session.phoneNumber; // Lấy số điện thoại từ session
+const verifyOtp = async (req, res) => {
+    try {
+        const { otp } = req.body;
+        const authHeader = req.headers['authorization'];
 
-    if (!phoneNumber || !otp) {
-    return res.status(400).json({ success: false, error: "Missing 'phoneNumber' or 'otp' field" });
+        // Kiểm tra xem có token trong header không
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, error: "Unauthorized: No token provided" });
+        }
+
+        // Giải mã token
+        const token = authHeader.split(' ')[1];
+        let decoded;
+
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET); // Kiểm tra tính hợp lệ của token
+        } catch (err) {
+            return res.status(401).json({ success: false, error: "Invalid or expired token" });
+        }
+
+        // Lấy số điện thoại từ token (giả sử token chứa thông tin số điện thoại)
+        const phoneNumber = decoded.sdt; // Số điện thoại lưu trong token
+
+        if (!phoneNumber || !otp) {
+            return res.status(400).json({ success: false, error: "Missing 'phoneNumber' or 'otp' field" });
+        }
+
+        // Lấy dữ liệu OTP đã lưu trong bộ nhớ
+        const storedOtpData = otpStore.get(phoneNumber);
+
+        if (!storedOtpData) {
+            return res.status(400).json({ success: false, error: "OTP expired or not found" });
+        }
+
+        // Kiểm tra OTP có đúng hay không
+        if (storedOtpData.otp !== parseInt(otp, 10)) {
+            return res.status(400).json({ success: false, error: "Invalid OTP" });
+        }
+
+        // Kiểm tra nếu OTP đã hết hạn
+        if (Date.now() > storedOtpData.expiresAt) {
+            otpStore.delete(phoneNumber); // Xóa OTP đã hết hạn
+            return res.status(400).json({ success: false, error: "OTP expired" });
+        }
+
+        // Xóa OTP khỏi bộ nhớ sau khi xác thực thành công
+        otpStore.delete(phoneNumber);
+
+        // Trả về kết quả xác thực OTP thành công
+        return res.status(200).json({
+            success: true,
+            message: "OTP verified successfully!",
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error.message,
+        });
     }
-
-    const storedOtpData = otpStore.get(phoneNumber);
-
-    if (!storedOtpData) {
-    return res.status(400).json({ success: false, error: "OTP expired or not found" });
-    }
-
-    if (storedOtpData.otp !== parseInt(otp, 10)) {
-    return res.status(400).json({ success: false, error: "Invalid OTP" });
-    }
-
-    if (Date.now() > storedOtpData.expiresAt) {
-    otpStore.delete(phoneNumber);
-    return res.status(400).json({ success: false, error: "OTP expired" });
-    }
-
-    // Xóa OTP khỏi bộ nhớ sau khi xác thực thành công
-    otpStore.delete(phoneNumber);
-
-    return res.status(200).json({
-    success: true,
-    message: "OTP verified successfully!",
-    });
-} catch (error) {
-    return res.status(500).json({
-    success: false,
-    error: error.message,
-    });
-}
 };
 
 // Đổi mật khẩu
 const changePassword = async (req, res) => {
     try {
       const { newPassword } = req.body;
-  
-      const phoneNumber = req.session.phoneNumber; // Lấy số điện thoại từ session
+      const authHeader = req.headers['authorization'];
 
+        // Kiểm tra xem có token trong header không
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, error: "Unauthorized: No token provided" });
+        }
 
-    if (!phoneNumber) {
-        return res.status(400).json({ success: false, error: "No phone number found in session" });
-    }  
+        // Giải mã token
+        const token = authHeader.split(' ')[1];
+        let decoded;
+
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET); // Kiểm tra tính hợp lệ của token
+        } catch (err) {
+            return res.status(401).json({ success: false, error: "Invalid or expired token" });
+        }
+
+        // Lấy số điện thoại từ token (giả sử token chứa thông tin số điện thoại)
+        const phoneNumber = decoded.sdt; // Số điện thoại lưu trong token
     const passwordRegex = /^.{8,}$/;  // Mật khẩu phải có ít nhất 8 ký tự
     if (!passwordRegex.test(newPassword)) {
         return res.status(400).json({ message: "Password must be at least 8 characters long." });        
