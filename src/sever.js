@@ -6,7 +6,10 @@ import Cart from './route/cart.js';
 import Buy from './route/buy.js'; 
 import session  from 'express-session';
 import OrderRoutes from './route/order.js';
-// import { route } from './route/web.js'
+import connectDB from './config/db.js' ;  // Đảm bảo đường dẫn đúng
+
+connectDB();
+
 dotenv.config();
 
 const app = express(); 

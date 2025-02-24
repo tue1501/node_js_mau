@@ -12,6 +12,8 @@ const setupRoutes = (app) => {
 
     router.post('/login', LoginController.Login);
 
+    router.post('/loginelenew', LoginController.Loginelenew);
+
     router.get('/user/:id',authenticateJWT, LoginController.informations);
 
     router.put('/address/:id',authenticateJWT, LoginController.addaddress);

@@ -1,15 +1,117 @@
 // controllers/UserController.js
 import jwt from 'jsonwebtoken';
 import connection from '../config/database.js'
+import connectDB from '../config/db.js'
+import User from '../models/user.js';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
+import { v4 as uuidv4 } from 'uuid';
 dotenv.config();
+
+const Loginelenew = async (req, res) => {
+    try {
+        const { sdt, matkhau } = req.body; // Lấy các giá trị từ body
+
+        // Truy vấn người dùng từ cơ sở dữ liệu MySQL dựa trên số điện thoại
+        const [rows] = await connection.query(
+            'SELECT * FROM khachhang WHERE sdt = ?',
+            [sdt]
+        );
+        const user = rows[0];
+        const isMatch = await bcrypt.compare(matkhau, user.matkhau);
+
+        if (!isMatch) {
+            return res.status(401).json({ message: 'wrong password!' });
+        }
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Số điện thoại chưa được đăng ký!' });
+        }
+        let mongoUser1 = await User.findOne({ phone: user.sdt });
+
+        if (mongoUser1) {
+            return res.status(400).json({ message: 'Bạn đã đăng ký rồi với số điện thoại này!' });
+        }
+        // Kiểm tra nếu người dùng đã tồn tại trong MongoDB
+        let mongoUser = await User.findOne({ 
+            $and: [
+                { phone: user.sdt },  // Kiểm tra số điện thoại
+                { eleid: user.eleid } // Kiểm tra EleID
+            ] 
+        });
+        if (mongoUser) {
+            const token = jwt.sign(
+                {
+                    id: mongoUser._id,
+                    name: mongoUser.name,
+                    email: mongoUser.email,
+                    phone: mongoUser.phone,
+                    role: mongoUser.role,
+                    eleid: mongoUser.eleid  // Đưa eleid vào token
+                },
+                process.env.JWT_SECRET_ELE,
+                { expiresIn: '7d' }
+            );
+    
+
+            return res.status(200).json({
+                message: 'Đăng nhập thành công!',
+                token,
+                // userInfo, 
+            });    
+        }
+        else{  
+            // Tạo eleid bằng uuid để đảm bảo tính duy nhất
+            const uniqueEleid = uuidv4();
+    
+            // Tạo mới người dùng trong MongoDB
+            mongoUser = new User({
+                name: user.hoTen,  
+                email: user.email,
+                phone: user.sdt,
+                password: await bcrypt.hash(matkhau, 10),  // Mã hóa mật khẩu
+                role: 'guest',
+                eleid: uniqueEleid,  // Gán eleid là UUID duy nhất
+            });
+    
+            await mongoUser.save();  
+    
+            const token = jwt.sign(
+                {
+                    id: mongoUser._id,
+                    name: mongoUser.name,
+                    email: mongoUser.email,
+                    phone: mongoUser.phone,
+                    role: mongoUser.role,
+                    eleid: mongoUser.eleid  // Đưa eleid vào token
+                },
+                process.env.JWT_SECRET_ELE,
+                { expiresIn: '7d' }
+            );
+    
+            // Trả về thông tin người dùng cùng với token
+            const userInfo = {
+                id: mongoUser._id,
+                sdt: mongoUser.phone,
+                hoTen: mongoUser.name,
+                email: mongoUser.email,
+                eleid: mongoUser.eleid, // Trả về eleid đã tạo
+            };
+    
+            return res.status(200).json({
+                message: 'Đăng ký thành công!',
+                token,
+                // userInfo, 
+            });
+        }
+    } catch (error) {
+        console.error('Error registering user:', error);
+        return res.status(500).json({ message: 'Lỗi khi đăng ký.' });
+    }
+};
 
 const Login = async (req, res) => {
     try {
         const { sdt, matkhau } = req.body;
-
-
         const [rows] = await connection.query(
             'SELECT * FROM khachhang WHERE sdt = ?',
             [sdt]
@@ -442,5 +544,5 @@ const logout = (req, res) => {
 
 // Xuất khẩu hàm getAllUsers
 export default { 
-    Register,Login,informations,addaddress,resertpass,adddiscount,discountbyid,logout,
+    Register,Login,informations,addaddress,resertpass,adddiscount,discountbyid,logout,Loginelenew
 };

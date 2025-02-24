@@ -201,14 +201,27 @@ const changePassword = async (req, res) => {
               ]);
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: 'Customer not found' });
-      }
-  
-      req.session.destroy(); // Xóa số điện thoại khỏi session sau khi thay đổi mật khẩu
-  
-      return res.status(200).json({
-        success: true,
-        message: "Password changed successfully!",
-      });
+      }     
+          if (!token) {
+              return res.status(400).json({ success: false, message: 'Token missing' });
+          }
+      
+          try {
+              const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Giải mã token để lấy thông tin người dùng
+              // Thêm token vào blacklist
+              jwtBlacklist.add(token);  // Đưa token vào blacklist để không sử dụng lại
+      
+              res.clearCookie('token');  // Nếu bạn dùng cookie để lưu token
+              return res.status(200).json({
+                success: true,
+                message: "Password changed successfully!",
+              });
+          } catch (error) {
+            return res.status(500).json({
+                success: false,
+                error: error.message,
+          });
+        }    
     } catch (error) {
       return res.status(500).json({
         success: false,
@@ -406,11 +419,6 @@ const getProductById = async (req, res) => {
         });
     }
 };
-
-
-
-
-
 
 // Xuất khẩu hàm getAllUsers
 export default {
