@@ -9,8 +9,8 @@ import bcrypt from 'bcrypt';
 dotenv.config();
 
 // Cấu hình Twilio
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
+const accountSid = 'ACc8feb03439456d07ac6446842c3c8d7a';
+const authToken = 'a8d97d0508d1c99a31fc42536681a1ce';
 
 // const accountSid = process.env.TWILIO_ACCOUNT_SID;
 // const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -59,7 +59,7 @@ const sendSms = async (req, res) => {
     );
       const message = await client.messages.create({
         body: messageBody,
-        from: process.env.TWILIO_PHONE_NUMBER, // Số Twilio
+        from: '+18667021741', // Số Twilio
         to,
       });
   
