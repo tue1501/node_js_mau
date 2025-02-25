@@ -10,7 +10,7 @@ dotenv.config();
 
 // Cấu hình Twilio
 const accountSid = 'ACc8feb03439456d07ac6446842c3c8d7a';
-const authToken = 'a8d97d0508d1c99a31fc42536681a1ce';
+const authToken = '0ecaa3f044999686f19cb806584d5a05';
 
 // const accountSid = process.env.TWILIO_ACCOUNT_SID;
 // const authToken = process.env.TWILIO_AUTH_TOKEN;
