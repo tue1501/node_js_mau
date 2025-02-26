@@ -140,6 +140,10 @@ const verifyOtp = async (req, res) => {
     }
 };
 
+import { jwtBlacklist } from '../middleware/jwtBlacklist.js';  // Import blacklist từ jwtBlacklist.js
+
+dotenv.config();
+
 // Đổi mật khẩu
 const changePassword = async (req, res) => {
     try {
