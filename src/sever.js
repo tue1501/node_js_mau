@@ -4,6 +4,7 @@ import initAPiRouter from './route/product.js';
 import setupRoutes from './route/login.js'; 
 import Cart from './route/cart.js'; 
 import Buy from './route/buy.js'; 
+import Evaluate from './route/evaluate.js';
 import session  from 'express-session';
 import OrderRoutes from './route/order.js';
 import connectDB from './config/db.js' ;  // Đảm bảo đường dẫn đúng
@@ -36,6 +37,7 @@ setupRoutes(app);
 Cart(app);
 Buy(app);
 OrderRoutes(app);
+Evaluate(app);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
