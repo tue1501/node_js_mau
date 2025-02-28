@@ -6,6 +6,12 @@ import twilio from 'twilio';
 // import connection from '../config/database.js';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
+// Sử dụng import (ES Modules)
+
+import { jwtBlacklist } from '../middleware/jwtBlacklist.js';  // Import blacklist từ jwtBlacklist.js
+import multer from 'multer';
+
+
 dotenv.config();
 
 // Cấu hình Twilio
@@ -140,8 +146,6 @@ const verifyOtp = async (req, res) => {
     }
 };
 
-import { jwtBlacklist } from '../middleware/jwtBlacklist.js';  // Import blacklist từ jwtBlacklist.js
-
 dotenv.config();
 
 // Đổi mật khẩu
@@ -236,17 +240,41 @@ const changePassword = async (req, res) => {
   };  
   
 
-const getAllproduct = async (req, res) => {
+
+  const getAllproduct = async (req, res) => {
     try {
-        
+        // Truy vấn tất cả sản phẩm với các trường cần thiết, bao gồm trường 'hinhanh'
         const [rows, fields] = await connection.execute('SELECT * FROM sanpham');
-        console.log(res);
+
+        // Kiểm tra nếu không có sản phẩm nào
+        if (rows.length === 0) {
+            return res.status(404).json({
+                message: 'Không có sản phẩm nào!',
+            });
+        }
+
+        // Xử lý dữ liệu để tạo đường link cho ảnh
+        const productsWithImages = rows.map(row => ({
+            idSanPham: row.idSanPham,
+            idChiTietLoaiSanPham: row.idChiTietLoaiSanPham,
+            tensp: row.tensp,
+            mausac: row.mausac,
+            xuatxu: row.xuatxu,
+            diemtb: row.diemtb,
+            gia: row.gia,
+            tonkho: row.tonkho,
+            mota: row.mota,
+            hinhanh: row.hinhanh ? `http://localhost:8080${row.hinhanh}` : null, // Tạo đường link ảnh nếu có
+        }));
+
+        // Trả về dữ liệu sản phẩm và đường link hình ảnh
         return res.json({
-            data: rows,
+            data: productsWithImages,
         });
     } catch (err) {
-        return res.json({
-            message: 'Error fetching users',
+        console.error(err);
+        return res.status(500).json({
+            message: 'Lỗi khi lấy dữ liệu sản phẩm',
             error: err,
         });
     }
@@ -270,6 +298,51 @@ const producttype = async (req, res) => {
         });
     }
 };
+
+
+// Hàm thêm sản phẩm
+const addProduct = async (req, res) => {
+    try {
+        // Kiểm tra xem ảnh đã được tải lên chưa
+        if (!req.file) {
+            return res.status(400).json({
+                message: 'Ảnh sản phẩm là bắt buộc!',
+            });
+        }
+
+        // Lấy dữ liệu từ request body
+        const { 
+            idChiTietLoaiSanPham, 
+            tensp, 
+            mausac, 
+            xuatxu, 
+            diemtb, 
+            gia, 
+            tonkho, 
+            mota 
+        } = req.body;
+        const hinhanh = req.file ? `/uploads/${req.file.filename}` : ""; // Lưu đường dẫn ảnh
+        // Thêm sản phẩm vào cơ sở dữ liệu (không truyền idSanPham vì MySQL tự động tăng)
+        const [rows, fields] = await connection.execute(
+            'INSERT INTO sanpham (idChiTietLoaiSanPham, tensp, mausac, xuatxu, hinhanh, diemtb, gia, tonkho, mota) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [ idChiTietLoaiSanPham, tensp, mausac, xuatxu, hinhanh, diemtb, gia, tonkho, mota]
+        );
+        // Lấy đường dẫn của ảnh đã lưu
+
+        // Trả về kết quả
+        return res.json({
+            message: 'Sản phẩm đã được thêm thành công!',
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            message: 'Lỗi khi thêm sản phẩm',
+            error: err,
+        });
+    }
+};
+
+
 
 
 
@@ -427,5 +500,5 @@ const getProductById = async (req, res) => {
 
 // Xuất khẩu hàm getAllUsers
 export default {
-    getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType,getProductById,sendSms,verifyOtp,changePassword
+    getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType,getProductById,sendSms,verifyOtp,changePassword, addProduct,
 };

@@ -1,10 +1,15 @@
 import express from "express";
 import ProductController from '../controllers/ProductController.js';
 import authenticateJWT from '../middleware/authenticate.js';
+
+import upload from '../middleware/uploadMiddleware.js';
+
 // import AuthController from '../controllers/AuthController.js';
 const router = express.Router();
 const initAPiRouter = (app) => {
     router.get('/product',authenticateJWT,ProductController.getAllproduct)
+
+    router.post('/add-product', upload.single("hinhanh"), ProductController.addProduct);
 
     router.get('/producttype',authenticateJWT,ProductController.producttype)
 
@@ -28,4 +33,4 @@ const initAPiRouter = (app) => {
 
     return app.use('/api', router);
 }
-export default initAPiRouter ; 
+export default initAPiRouter ;
