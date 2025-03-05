@@ -146,6 +146,7 @@ const verifyOtp = async (req, res) => {
     }
 };
 
+
 dotenv.config();
 
 // Đổi mật khẩu

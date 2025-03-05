@@ -31,6 +31,26 @@ app.use(session({
       maxAge: 3600000,         // Thời gian session hết hạn (1 giờ)
     }
   }));
+  app.get('/', (req, res) => {
+    res.send(`
+      <html>
+        <head>
+          <title>Welcome to Petland API</title>
+          <meta name="zalo-platform-site-verification" content="MDwO2hti7o5tsuqTzD01527_YY_DYLjsDJ0n" />
+        </head>
+        <body>
+          <h1>Welcome to Petland API!</h1>
+          <!-- Start of Fchat.vn -->
+          <script type="text/javascript" src="https://cdn.fchat.vn/assets/embed/webchat.js?id=67c6ee90588562bedd06c223" async="async"></script>
+          <!-- End of Fchat.vn -->
+        </body>
+      </html>
+    `);
+  });
+  app.get('/zalo_verifierMDwO2hti7o5tsuqTzD01527_YY_DYLjsDJ0n.html', (req, res) => {
+    res.send();
+  });
+  
 
 initAPiRouter(app);  
 setupRoutes(app);
