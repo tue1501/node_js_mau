@@ -371,7 +371,7 @@ const discountbyid = async (req, res) => {
         const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' '); // Lấy thời gian hiện tại
         // Truy vấn tất cả giảm giá của khách hàng, kết hợp với thông tin từ bảng `giamgia`
         const [discounts] = await connection.execute(
-            `SELECT g.idGiamGia, g.tengiamgia, g.giamax,g.giamin, g.danggiamgia, g.mota, ct.trangthai,g.ngaybatdau, g.ngayketthuc
+            `SELECT g.idGiamGia, g.tengiamgia,g.giamgia, g.giamax,g.giamin, g.danggiamgia, g.mota, ct.trangthai,g.ngaybatdau, g.ngayketthuc
                 FROM chitietgiamgia ct
                 JOIN giamgia g ON ct.idGiamGia = g.idGiamGia
                 WHERE ct.idKhachHang = ? AND g.ngayketthuc >= ?`,
