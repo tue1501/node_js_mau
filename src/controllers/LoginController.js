@@ -306,29 +306,10 @@ const resertpass = async (req, res) => {
 
 
 const adddiscount = async (req, res) => {
-    const { id } = req.params; // ID của khách hàng
+    const id = req.user.id; // Lấy ID từ token đã giải mã\
     const { discountcode } = req.body; // ID của mã giảm giá được gửi từ client
 
     try {
-        const authHeader = req.headers['authorization'];
-        if (!authHeader) {
-            return res.status(401).json({ message: 'No token provided' });
-        }
-
-        // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
-        const token = authHeader.split(' ')[1];
-        if (!token) {
-            return res.status(401).json({ message: 'Invalid token format' });
-        }
-
-        // 3️ Giải mã token để lấy ID người dùng
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
-
-        // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
-        if (id !== loggedInUserId.toString()) {
-            return res.status(401).json({ message: 'You have been logged out due to invalid access' });
-        }
         // Kiểm tra nếu không có ID khách hàng
         if (!id) {
             return res.status(400).json({ message: 'Customer ID is required' });
@@ -384,36 +365,16 @@ const adddiscount = async (req, res) => {
 
 
 const discountbyid = async (req, res) => {
-    const { id } = req.params; // ID của khách hàng
+    const id = req.user.id; // Lấy ID từ token đã giải mã\
 
     try {
-        const authHeader = req.headers['authorization'];
-        if (!authHeader) {
-            return res.status(401).json({ message: 'No token provided' });
-        }
-
-        // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
-        const token = authHeader.split(' ')[1];
-        if (!token) {
-            return res.status(401).json({ message: 'Invalid token format' });
-        }
-
-        // 3️ Giải mã token để lấy ID người dùng
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
-
-        // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
-        if (id !== loggedInUserId.toString()) {
-            return res.status(401).json({ message: 'You have been logged out due to invalid access' });
-        }
         const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' '); // Lấy thời gian hiện tại
-
         // Truy vấn tất cả giảm giá của khách hàng, kết hợp với thông tin từ bảng `giamgia`
         const [discounts] = await connection.execute(
-            `SELECT g.tengiamgia, g.ngaybatdau, g.ngayketthuc, g.mota, ct.trangthai
-             FROM chitietgiamgia ct
-             JOIN giamgia g ON ct.idGiamGia = g.idGiamGia
-             WHERE ct.idKhachHang = ? AND g.ngayketthuc >= ?`,
+            `SELECT g.idGiamGia, g.tengiamgia, g.giamax,g.giamin, g.danggiamgia, g.mota, ct.trangthai,g.ngaybatdau, g.ngayketthuc
+                FROM chitietgiamgia ct
+                JOIN giamgia g ON ct.idGiamGia = g.idGiamGia
+                WHERE ct.idKhachHang = ? AND g.ngayketthuc >= ?`,
             [id, currentDate]
         );
 

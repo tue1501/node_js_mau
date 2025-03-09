@@ -27,9 +27,9 @@ const setupRoutes = (app) => {
     
     // router.post('/password/:id',authenticateJWT, LoginController.password);
     
-    router.post('/adddiscount/:id',authenticateJWT, LoginController.adddiscount);
+    router.post('/adddiscount',authenticateJWT, LoginController.adddiscount);
     
-    router.get('/discountbyid/:id',authenticateJWT, LoginController.discountbyid);
+    router.get('/discountbyid',authenticateJWT, LoginController.discountbyid);
 
     router.get('/logout/:id', authenticateJWT, LoginController.logout);
 
