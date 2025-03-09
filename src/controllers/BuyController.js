@@ -67,7 +67,8 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
 
 // Hàm Pay để xử lý đơn hàng và phương thức thanh toán
 const Pay = async (req, res) => {
-    const { idkhachhang, idsanpham, note, iddiscount, quantity, paymentMethod } = req.body;
+    const {  idsanpham, note, iddiscount, quantity, paymentMethod } = req.body;
+    const idkhachhang = req.user.id; // Lấy ID từ token đã giải mã\
 
     try {
         if (!Array.isArray(idsanpham) || idsanpham.length === 0 || !Array.isArray(quantity) || quantity.length !== idsanpham.length) {
