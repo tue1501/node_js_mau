@@ -10,7 +10,7 @@ import OrderRoutes from './route/order.js';
 import connectDB from './config/db.js' ;  // Đảm bảo đường dẫn đúng
 import path from 'path';
 import { fileURLToPath } from 'url';
-
+import discount from './route/discount.js';
 
 // Cấu hình express để phục vụ hình ảnh từ thư mục uploads
 
@@ -80,19 +80,19 @@ app.post("/send-message", async (req, res) => {
 
 
 
-
 initAPiRouter(app);  
 setupRoutes(app);
 Cart(app);
 Buy(app);
 OrderRoutes(app);
 Evaluate(app);
+discount(app);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 connectDB();
 
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
 
