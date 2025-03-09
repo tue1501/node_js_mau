@@ -1,7 +1,7 @@
 import express from "express";
 import LoginController from '../controllers/LoginController.js';
 import authenticateJWT from '../middleware/authenticate.js';
-
+import checkSuperAdmin from '../middleware/checkSuperAdmin.js';
 
 const router = express.Router()
 
@@ -13,13 +13,17 @@ const setupRoutes = (app) => {
 
     router.post('/login', LoginController.Login);
 
+    router.post('/loginqtv', LoginController.LoginQtv);
+
+    router.post('/addadmin', LoginController.addAdmin);
+
     router.post('/loginelenew', LoginController.Loginelenew);
 
-    router.get('/user/:id',authenticateJWT, LoginController.informations);
+    router.get('/user',authenticateJWT, LoginController.informations);
 
-    router.put('/address/:id',authenticateJWT, LoginController.addaddress);
+    router.put('/address',authenticateJWT, LoginController.addaddress);
 
-    router.put('/resertpass/:id',authenticateJWT, LoginController.resertpass);
+    router.put('/resertpass',authenticateJWT, LoginController.resertpass);
     
     // router.post('/password/:id',authenticateJWT, LoginController.password);
     
@@ -28,6 +32,8 @@ const setupRoutes = (app) => {
     router.get('/discountbyid/:id',authenticateJWT, LoginController.discountbyid);
 
     router.get('/logout/:id', authenticateJWT, LoginController.logout);
+
+    router.post('/add-admin', LoginController.addAdmin);
 
     return app.use('/api', router);
 }

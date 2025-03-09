@@ -1,13 +1,12 @@
 import express from "express";
 import ProductController from '../controllers/ProductController.js';
 import authenticateJWT from '../middleware/authenticate.js';
-
+import verifyToken from '../middleware/authenticate.js';
 import upload from '../middleware/uploadMiddleware.js';
 
-// import AuthController from '../controllers/AuthController.js';
 const router = express.Router();
 const initAPiRouter = (app) => {
-    router.get('/product',authenticateJWT,ProductController.getAllproduct)
+    router.get('/product',[authenticateJWT,verifyToken],ProductController.getAllproduct)
 
     router.post('/add-product', upload.single("hinhanh"), ProductController.addProduct);
 
@@ -30,6 +29,16 @@ const initAPiRouter = (app) => {
     router.post('/verify-otp', ProductController.verifyOtp);
 
     router.post('/change-password',  ProductController.changePassword);
+
+    router.post('/addProductType',  authenticateJWT,ProductController.addProductType);
+
+    router.post('/addProductTypeDetail',  authenticateJWT,ProductController.addProductTypeDetail);
+
+    router.put('/updateProductType/:id', authenticateJWT,ProductController.updateProductType);
+
+    router.put('/updateProductTypeDetail/:id', authenticateJWT,ProductController.updateProductTypeDetail);
+
+    router.put('/updateProduct/:id', upload.single('hinhanh'), ProductController.updateProduct);
 
     return app.use('/api', router);
 }

@@ -163,71 +163,35 @@ const Register = async (req, res) => {
 
 
 const informations = async (req, res) => {
-    const { id } = req.params;
-
     try {
-        const authHeader = req.headers['authorization'];
-        if (!authHeader) {
-            return res.status(401).json({ message: 'No token provided' });
-        }
-
-        // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
-        const token = authHeader.split(' ')[1];
-        if (!token) {
-            return res.status(401).json({ message: 'Invalid token format' });
-        }
-
-        // 3️ Giải mã token để lấy ID người dùng
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
-
-        // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
-        if (id !== loggedInUserId.toString()) {
-            return res.status(401).json({ message: 'You have been logged out due to invalid access' });
-        }
-        // Lấy thông tin người dùng từ cơ sở dữ liệu
-        const [rows] = await connection.query('SELECT idKhachHang, hoten, sdt,gmail FROM khachhang WHERE idKhachHang = ?', [id]);
+        const userId = req.user.id; // Lấy ID từ token đã giải mã
+        // Truy vấn cơ sở dữ liệu để lấy thông tin người dùng dựa trên userId từ token
+        const [rows] = await connection.query(
+            'SELECT idKhachHang, hoten, sdt, gmail,diachi FROM khachhang WHERE idKhachHang = ?', 
+            [userId]
+        );
 
         // Kiểm tra nếu không tìm thấy người dùng
         if (rows.length === 0) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ message: 'Không tìm thấy người dùng' });
         }
 
-        // Trả về thông tin người dùng
+        // Trả về thông tin người dùng dưới dạng JSON
         res.status(200).json(rows[0]);
     } catch (error) {
+        // Ghi log lỗi nếu có
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        // Trả về lỗi server nếu có vấn đề xảy ra
+        res.status(500).json({ message: 'Lỗi máy chủ' });
     }
 };
 
 const addaddress = async (req, res) => {
-    const { id } = req.params;
-    const { diachi } = req.body; // Lấy thông tin từ body
-    try {
-        const authHeader = req.headers['authorization'];
-        if (!authHeader) {
-            return res.status(401).json({ message: 'No token provided' });
-        }
-
-        // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
-        const token = authHeader.split(' ')[1];
-        if (!token) {
-            return res.status(401).json({ message: 'Invalid token format' });
-        }
-
-        // 3️ Giải mã token để lấy ID người dùng
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
-
-        // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
-        if (id !== loggedInUserId.toString()) {
-            return res.status(401).json({ message: 'You have been logged out due to invalid access' });
-        }
-        // Kiểm tra nếu không có ID khách hàng
-        if (!id) {
-            return res.status(400).json({ message: 'Customer ID is required' });
-        }
+        const id = req.user.id; // Lấy ID từ token đã giải mã
+        const { diachi } = req.body;
+        try {
+        // Truy vấn cơ sở dữ liệu để lấy thông tin người dùng dựa trên userId từ token
+       
 
         if (!diachi) {
             return res.status(400).json({ message: 'No fields to update' });
@@ -290,29 +254,9 @@ const addaddress = async (req, res) => {
 
 
 const resertpass = async (req, res) => {
-    const { id } = req.params;
-    const { matkhaucu, matkhau } = req.body;  // Lấy thông tin từ body
-
+    const id = req.user.id; // Lấy ID từ token đã giải mã\
+    const { matkhaucu, matkhau } = req.body; // Lấy thông tin từ body
     try {
-        const authHeader = req.headers['authorization'];
-        if (!authHeader) {
-            return res.status(401).json({ message: 'No token provided' });
-        }
-
-        // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
-        const token = authHeader.split(' ')[1];
-        if (!token) {
-            return res.status(401).json({ message: 'Invalid token format' });
-        }
-
-        // 3️ Giải mã token để lấy ID người dùng
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
-
-        // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
-        if (id !== loggedInUserId.toString()) {
-            return res.status(401).json({ message: 'You have been logged out due to invalid access' });
-        }
         // Kiểm tra nếu không có ID khách hàng
         if (!id) {
             return res.status(400).json({ message: 'Customer ID is required' });
@@ -509,7 +453,91 @@ const logout = (req, res) => {
     }
 };
 
+
+
+const LoginQtv = async (req, res) => {
+    try {
+        const { sdt, matkhau } = req.body;
+
+        // Kiểm tra số điện thoại của quản trị viên trong bảng qtv
+        const [rows] = await connection.execute(
+            'SELECT * FROM qtv WHERE sdt = ?',
+            [sdt]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Quản trị viên không tồn tại!' });
+        }
+
+        const qtv = rows[0];
+
+        // So sánh mật khẩu
+        const isMatch = await bcrypt.compare(matkhau, qtv.matkhau);
+
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Sai mật khẩu!' });
+        }
+
+        // Tạo JWT token cho quản trị viên
+        const token = jwt.sign(
+            { id: qtv.idQtv },  // Payload chứa idQtv
+            process.env.JWT_SECRET,  // Khóa bí mật
+            { expiresIn: '7d' }  // Token hết hạn sau 7 ngày
+        );
+
+        // Trả về token và thông báo thành công
+        return res.status(200).json({ message: 'Đăng nhập thành công!', token });
+    } catch (error) {
+        console.error('Lỗi khi đăng nhập QTV:', error);
+        return res.status(500).json({ message: 'Lỗi khi đăng nhập QTV.' });
+    }
+};
+
+
+const addAdmin = async (req, res) => {
+    try {
+        const { hoten, sdt, matkhau, idQuyen } = req.body;
+
+        // Kiểm tra dữ liệu đầu vào
+        if (!hoten || !sdt || !matkhau || !idQuyen) {
+            return res.status(400).json({ message: 'Tên, số điện thoại, mật khẩu và idQuyen là bắt buộc!' });
+        }
+
+        // Kiểm tra email đã tồn tại chưa
+        const [existingAdmin] = await connection.execute(
+            'SELECT * FROM qtv WHERE sdt = ?',
+            [sdt]
+        );
+        
+        if (existingAdmin.length > 0) {
+            return res.status(400).json({ message: 'sdtsdt đã tồn tại!' });
+        }
+
+        // Mã hóa mật khẩu
+        const hashedPassword = await bcrypt.hash(matkhau, 10);
+
+        // Thêm admin mới vào database
+        const [result] = await connection.execute(
+            'INSERT INTO qtv (hoten, sdt, matkhau, idQuyen) VALUES (?, ?, ?, ?)',
+            [hoten, sdt, hashedPassword, idQuyen]
+        );
+
+        return res.status(201).json({
+            message: 'Admin đã được thêm thành công!',
+            data: {
+                id: result.insertId,
+                hoten,
+                sdt,
+                idQuyen,
+            }
+        });
+    } catch (err) {
+        console.error('Lỗi khi thêm admin:', err);
+        return res.status(500).json({ message: 'Lỗi hệ thống khi thêm admin!', error: err.message });
+    }
+};
+
 // Xuất khẩu hàm getAllUsers
 export default { 
-    Register,Login,informations,addaddress,resertpass,adddiscount,discountbyid,logout,Loginelenew
+    Register,Login,informations,addaddress,resertpass,adddiscount,discountbyid,logout,Loginelenew,LoginQtv,addAdmin
 };

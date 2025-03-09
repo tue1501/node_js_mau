@@ -7,7 +7,13 @@ import twilio from 'twilio';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 // Sử dụng import (ES Modules)
+import { fileURLToPath } from "url";
+import path from "path";
+import fs from "fs";
 
+// Tạo __dirname theo cách thủ công trong ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import { jwtBlacklist } from '../middleware/jwtBlacklist.js';  // Import blacklist từ jwtBlacklist.js
 import multer from 'multer';
 
@@ -265,7 +271,7 @@ const changePassword = async (req, res) => {
             gia: row.gia,
             tonkho: row.tonkho,
             mota: row.mota,
-            hinhanh: row.hinhanh ? `http://localhost:8080${row.hinhanh}` : null, // Tạo đường link ảnh nếu có
+            hinhanh: row.hinhanh ? `https://node-js-mau.onrender.com${row.hinhanh}` : null, // Tạo đường link ảnh nếu có
         }));
 
         // Trả về dữ liệu sản phẩm và đường link hình ảnh
@@ -343,8 +349,96 @@ const addProduct = async (req, res) => {
     }
 };
 
+const updateProduct = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            idChiTietLoaiSanPham,
+            tensp,
+            mausac,
+            xuatxu,
+            diemtb,
+            gia,
+            tonkho,
+            mota
+        } = req.body;
 
+        if (!tensp || !gia || !tonkho) {
+            return res.status(400).json({
+                message: 'Tên sản phẩm, giá và số lượng tồn kho là bắt buộc!',
+            });
+        }
 
+        // Lấy thông tin ảnh cũ từ DB
+        const [oldProduct] = await connection.execute(
+            `SELECT hinhanh FROM sanpham WHERE idSanPham = ?`,
+            [id]
+        );
+
+        if (oldProduct.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy sản phẩm!' });
+        }
+
+        let oldImage = oldProduct[0].hinhanh;
+        let newImage = req.file ? `/uploads/${req.file.filename}` : oldImage;
+
+        // Nếu có ảnh mới -> Xóa ảnh cũ
+        if (req.file && oldImage) {
+            const imagePath = path.join(__dirname, "..", oldImage);
+            if (fs.existsSync(imagePath)) {
+                fs.unlinkSync(imagePath); // Xóa file ảnh cũ
+            }
+        }
+
+        // Cập nhật sản phẩm
+        const [result] = await connection.execute(
+            `
+            UPDATE sanpham
+            SET idChiTietLoaiSanPham = ?, tensp = ?, mausac = ?, xuatxu = ?, 
+                diemtb = ?, gia = ?, tonkho = ?, mota = ?, hinhanh = ?
+            WHERE idSanPham = ?
+            `,
+            [
+                idChiTietLoaiSanPham,
+                tensp,
+                mausac,
+                xuatxu,
+                diemtb,
+                gia,
+                tonkho,
+                mota,
+                newImage,
+                id
+            ]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy sản phẩm!' });
+        }
+
+        return res.json({
+            message: 'Sản phẩm đã được cập nhật thành công!',
+            data: {
+                idSanPham: id,
+                idChiTietLoaiSanPham,
+                tensp,
+                mausac,
+                xuatxu,
+                diemtb,
+                gia,
+                tonkho,
+                mota,
+                hinhanh: newImage
+            },
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            message: 'Lỗi khi cập nhật sản phẩm!',
+            error: err,
+        });
+    }
+};
 
 
 const producttypedetails = async (req, res) => {
@@ -499,7 +593,169 @@ const getProductById = async (req, res) => {
     }
 };
 
+
+
+
+const addProductType = async (req, res) => {
+    try {
+        const { tenloai } = req.body; // Lấy tên loại sản phẩm từ body của yêu cầu HTTP
+
+        // Kiểm tra xem tên loại sản phẩm có hợp lệ không
+        if (!tenloai) {
+            return res.status(400).json({ message: 'Tên loại sản phẩm là bắt buộc' });
+        }
+
+        // Thực hiện truy vấn để thêm loại sản phẩm mới vào cơ sở dữ liệu
+        const [result] = await connection.execute(
+            `
+            INSERT INTO loaisanpham (tenloai)
+            VALUES (?)
+            `,
+            [tenloai]
+        );
+
+        // Trả về thông báo thành công cùng với id tự tạo
+        return res.status(201).json({
+            message: 'Loại sản phẩm đã được thêm thành công',
+            data: {
+                idSanPham: result.insertId, // insertId là id tự tạo từ cơ sở dữ liệu
+                tenloai,
+            },
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            message: 'Lỗi khi thêm loại sản phẩm',
+            error: err,
+        });
+    }
+};
+
+
+const addProductTypeDetail = async (req, res) => {
+    try {
+        const { tenchitiet, idLoaiSanPham } = req.body; // Lấy dữ liệu từ body của yêu cầu HTTP
+
+        // Kiểm tra xem các trường có hợp lệ không
+        if (!tenchitiet || !idLoaiSanPham) {
+            return res.status(400).json({ message: 'Tên chi tiết và id loại sản phẩm là bắt buộc' });
+        }
+
+        // Thực hiện truy vấn để thêm chi tiết loại sản phẩm mới vào cơ sở dữ liệu
+        const [result] = await connection.execute(
+            `
+            INSERT INTO chitietloaisanpham (tenchitiet, idLoaiSanPham)
+            VALUES (?, ?)
+            `,
+            [tenchitiet, idLoaiSanPham]
+        );
+
+        // Trả về thông báo thành công cùng với id tự tạo của chi tiết loại sản phẩm
+        return res.status(201).json({
+            message: 'Chi tiết loại sản phẩm đã được thêm thành công',
+            data: {
+                idChiTietLoaiSanPham: result.insertId, // id tự tạo từ cơ sở dữ liệu
+                tenchitiet,
+                idLoaiSanPham,
+            },
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            message: 'Lỗi khi thêm chi tiết loại sản phẩm',
+            error: err,
+        });
+    }
+};
+
+
+
+const updateProductType = async (req, res) => {
+    try {
+        const { id } = req.params; // Lấy idSanPham từ URL
+        const { tenloai } = req.body; // Chỉ lấy tenloai từ body
+
+        // Kiểm tra nếu không có tên loại sản phẩm
+        if (!tenloai) {
+            return res.status(400).json({ message: 'Tên loại sản phẩm là bắt buộc' });
+        }
+
+        // Thực hiện cập nhật loại sản phẩm
+        const [result] = await connection.execute(
+            `
+            UPDATE loaisanpham
+            SET tenloai = ?
+            WHERE idLoaiSanPham = ?
+            `,
+            [tenloai, id]
+        );
+
+        // Kiểm tra nếu không có dòng nào bị ảnh hưởng (tức là không tìm thấy id)
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy loại sản phẩm' });
+        }
+
+        // Trả về thông tin đã cập nhật
+        return res.json({
+            message: 'Loại sản phẩm đã được cập nhật thành công',
+            data: {
+                idSanPham: id,
+                tenloai,
+            },
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            message: 'Lỗi khi cập nhật loại sản phẩm',
+            error: err,
+        });
+    }
+};
+
+
+
+const updateProductTypeDetail = async (req, res) => {
+    try {
+        const { id } = req.params; // Lấy idChiTietLoaiSanPham từ URL
+        const { tenchitiet, idLoaiSanPham } = req.body; // Lấy dữ liệu từ body
+
+        // Kiểm tra nếu thiếu dữ liệu
+        if (!idLoaiSanPham) {
+            return res.status(400).json({ message: 'Tên chi tiết và id loại sản phẩm là bắt buộc' });
+        }
+
+        // Thực hiện cập nhật chi tiết loại sản phẩm
+        const [result] = await connection.execute(
+            `UPDATE chitietloaisanpham SET tenchitiet = ?, idLoaiSanPham = ? WHERE idChiTietLoaiSanPham = ?`,
+            [tenchitiet, idLoaiSanPham, id]
+        );
+
+        // Kiểm tra nếu không tìm thấy idChiTietLoaiSanPham
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy chi tiết loại sản phẩm' });
+        }
+
+        // Trả về thông tin đã cập nhật
+        return res.json({
+            message: 'Chi tiết loại sản phẩm đã được cập nhật thành công',
+            data: {
+                idChiTietLoaiSanPham: id,
+                tenchitiet,
+                idLoaiSanPham,
+            },
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            message: 'Lỗi khi cập nhật chi tiết loại sản phẩm',
+            error: err,
+        });
+    }
+};
+
+
+
 // Xuất khẩu hàm getAllUsers
 export default {
-    getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType,getProductById,sendSms,verifyOtp,changePassword, addProduct,
+    getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType,getProductById,sendSms,verifyOtp,changePassword, addProduct,addProductType,addProductTypeDetail,updateProductType,updateProductTypeDetail,updateProduct
 };

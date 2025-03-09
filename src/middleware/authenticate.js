@@ -28,3 +28,19 @@ const authenticateJWT = (req, res, next) => {
 };
 
 export default authenticateJWT; 
+
+export const verifyToken = (req, res, next) => {
+    try {
+        const token = req.headers.authorization?.split(" ")[1]; // Lấy token từ header
+        if (!token) {
+            return res.status(403).json({ message: "Không có token, vui lòng đăng nhập!" });
+        }
+
+        // Xác thực token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET); // Sử dụng SECRET_KEY từ dotenv
+        req.user = decoded; // Lưu user vào request
+        next(); // Cho phép tiếp tục vào API
+    } catch (err) {
+        return res.status(401).json({ message: "Token không hợp lệ hoặc hết hạn!" });
+    }
+};
