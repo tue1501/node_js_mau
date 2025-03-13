@@ -5,9 +5,9 @@ import authenticateJWT from '../middleware/authenticate.js';
 const router = express.Router();
 const Cart = (app) => {
     // Thêm sản phẩm vào giỏ hàng
-    router.post('/add-to-cart', CartController.addToCart);
+    router.post('/add-to-cart',authenticateJWT, CartController.addToCart);
     // Bớt sản phẩm vào giỏ hàng
-    router.post('/decrease', CartController.changeQuantity);
+    router.post('/decrease',authenticateJWT, CartController.changeQuantity);
     // Lấy giỏ hàng của người dùng
     router.get('/cart',authenticateJWT, CartController.getCart);
     // Xóa sản phẩm khỏi giỏ hàng
