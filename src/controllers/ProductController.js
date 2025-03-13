@@ -743,5 +743,7 @@ const updateProductTypeDetail = async (req, res) => {
 
 // Xuất khẩu hàm getAllUsers
 export default {
-    getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType,getProductById,sendSms,verifyOtp,changePassword, addProduct,addProductType,addProductTypeDetail,updateProductType,updateProductTypeDetail,updateProduct
+    getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType
+    ,getProductById,sendSms,verifyOtp,changePassword, addProduct,addProductType
+    ,addProductTypeDetail,updateProductType,updateProductTypeDetail,updateProduct
 };
