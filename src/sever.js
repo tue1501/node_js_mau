@@ -12,7 +12,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import discount from './route/discount.js';
 
-// Cấu hình express để phục vụ hình ảnh từ thư mục uploads
 
 
 dotenv.config();
@@ -76,7 +75,6 @@ app.post("/send-message", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 
 
