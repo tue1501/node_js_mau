@@ -46,10 +46,6 @@ const CartController = {
     async getCart(req, res) {
         try {
             const id = req.user.id;
-                    // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
-                    if (id !== loggedInUserId.toString()) {
-                        return res.status(401).json({ message: 'You have been logged out due to invalid access' });
-                    }
             // Lấy các sản phẩm trong giỏ hàng của người dùng
             const [cartItems] = await connection.query(
                 `SELECT c.idgiohanghang, c.idsanpham, c.sl, p.tensp, p.mausac, p.xuatxu, p.hinhanh, p.diemtb, p.gia, p.tonkho, p.mota
