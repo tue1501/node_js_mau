@@ -31,7 +31,7 @@ const setupRoutes = (app) => {
     
     router.get('/discountbyid',authenticateJWT, LoginController.discountbyid);
 
-    router.get('/logout/:id', authenticateJWT, LoginController.logout);
+    router.get('/logout', authenticateJWT, LoginController.logout);
 
     router.post('/add-admin', LoginController.addAdmin);
 
