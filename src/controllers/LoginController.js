@@ -471,7 +471,7 @@ const addAdmin = async (req, res) => {
         );
         
         if (existingAdmin.length > 0) {
-            return res.status(400).json({ message: 'sdtsdt đã tồn tại!' });
+            return res.status(400).json({ message: 'sdt đã tồn tại!' });
         }
 
         // Mã hóa mật khẩu

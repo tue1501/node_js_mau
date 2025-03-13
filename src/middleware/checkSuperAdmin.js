@@ -2,7 +2,7 @@
 import connection from '../config/database.js'
 const checkSuperAdmin = async (req, res, next) => {
     try {
-        const userId = req.user.idQtv; // Lấy idQtv từ token đã xác thực
+        const userId = req.admin.id; // Lấy idQtv từ token đã xác thực
 
         // Truy vấn để lấy quyền của admin
         const [rows] = await connection.execute(

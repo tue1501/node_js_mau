@@ -48,7 +48,9 @@ const CartController = {
             const id = req.user.id;
             // Lấy các sản phẩm trong giỏ hàng của người dùng
             const [cartItems] = await connection.query(
-                `SELECT c.idgiohanghang, c.idsanpham, c.sl, p.tensp, p.mausac, p.xuatxu, p.hinhanh, p.diemtb, p.gia, p.tonkho, p.mota
+                `SELECT c.idgiohanghang, c.idsanpham, c.sl, p.tensp, p.mausac, p.xuatxu, 
+                CONCAT('https://node-js-mau.onrender.com', p.hinhanh) as hinhanh, 
+                p.diemtb, p.gia, p.tonkho, p.mota
                 FROM giohang c
                 INNER JOIN sanpham p ON c.idsanpham = p.idSanPham
                 WHERE c.idkhachhang = ?`,
