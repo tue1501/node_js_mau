@@ -9,7 +9,7 @@ const Cart = (app) => {
     // Bớt sản phẩm vào giỏ hàng
     router.post('/decrease', CartController.changeQuantity);
     // Lấy giỏ hàng của người dùng
-    router.get('/cart/:id',authenticateJWT, CartController.getCart);
+    router.get('/cart',authenticateJWT, CartController.getCart);
     // Xóa sản phẩm khỏi giỏ hàng
     router.delete('/remove-from-cart/:idgiohang',authenticateJWT, CartController.removeFromCart);
 

@@ -5,15 +5,8 @@ const CartController = {
     async addToCart(req, res) {
         try {
             // Lấy token từ header Authorization
-            const authHeader = req.headers['authorization'];
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                return res.status(401).json({ message: 'Unauthorized: No token provided' });
-            }
-    
-            //  Giải mã token để lấy `idkhachhang`
-            const token = authHeader.split(' ')[1];
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            const idkhachhang = decoded.id; // ID khách hàng từ token
+            
+            const idkhachhang = req.user.id;
     
             //  Lấy `idsanpham` từ request body
             const { idsanpham } = req.body;
@@ -51,23 +44,8 @@ const CartController = {
     },    
     // Lấy giỏ hàng của người dùng
     async getCart(req, res) {
-        const { id } = req.params;  
         try {
-            const authHeader = req.headers['authorization'];
-                    if (!authHeader) {
-                        return res.status(401).json({ message: 'No token provided' });
-                    }
-                    // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
-                    const token = authHeader.split(' ')[1];
-
-                    if (!token) {
-                        return res.status(401).json({ message: 'Invalid token format' });
-                    }
-            
-                    // 3️ Giải mã token để lấy ID người dùng
-                    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-                    const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
-            
+            const id = req.user.id;
                     // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
                     if (id !== loggedInUserId.toString()) {
                         return res.status(401).json({ message: 'You have been logged out due to invalid access' });
@@ -112,17 +90,8 @@ const CartController = {
         const { idsanpham, status } = req.body;
     
         try {
-            // Lấy token từ header Authorization
-            const authHeader = req.headers['authorization'];
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                return res.status(401).json({ message: 'Unauthorized: No token provided' });
-            }
-    
-            // Giải mã token để lấy `idkhachhang`
-            const token = authHeader.split(' ')[1];
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            const idkhachhang = decoded.id; // ID khách hàng từ token
-    
+           
+            const idkhachhang = req.user.id;
             // Kiểm tra xem sản phẩm có trong giỏ hàng không
             const [existingProduct] = await connection.query(
                 'SELECT * FROM giohang WHERE idkhachhang = ? AND idsanpham = ?',
