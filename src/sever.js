@@ -11,7 +11,7 @@ import connectDB from './config/db.js' ;  // Đảm bảo đường dẫn đúng
 import path from 'path';
 import { fileURLToPath } from 'url';
 import discount from './route/discount.js';
-
+import revenue from './route/revenue.js';
 
 
 dotenv.config();
@@ -77,7 +77,7 @@ app.post("/send-message", async (req, res) => {
 });
 
 
-
+revenue(app);
 initAPiRouter(app);  
 setupRoutes(app);
 Cart(app);
