@@ -20,9 +20,7 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
     var orderGroupId = '';
     var autoCapture = true;
     var lang = 'vi';
-
     var rawSignature = "accessKey=" + accessKey + "&amount=" + amount + "&extraData=" + extraData + "&ipnUrl=" + ipnUrl + "&orderId=" + orderId + "&orderInfo=" + orderInfo + "&partnerCode=" + partnerCode + "&redirectUrl=" + redirectUrl + "&requestId=" + requestId + "&requestType=" + requestType;
-
     var signature = crypto.createHmac('sha256', secretKey)
         .update(rawSignature)
         .digest('hex');
@@ -43,7 +41,6 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
         orderGroupId: orderGroupId,
         signature: signature
     });
-
     const options = {
         method: 'POST',
         url: 'https://test-payment.momo.vn/v2/gateway/api/create',

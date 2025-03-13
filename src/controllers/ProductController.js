@@ -249,7 +249,7 @@ const getAllproduct = async (req, res) => {
             gia: row.gia,
             tonkho: row.tonkho,
             mota: row.mota,
-            hinhanh: row.hinhanh ? `https://node-js-mau.onrender.com${row.hinhanh}` : null, // Tạo đường link ảnh nếu có
+            hinhanh: row.hinhanh 
         }));
 
         // Trả về dữ liệu sản phẩm và đường link hình ảnh
@@ -285,6 +285,16 @@ const producttype = async (req, res) => {
 };
 
 
+import cloudinary from 'cloudinary';
+import c from 'config';
+
+// Sử dụng CLOUDINARY_URL từ biến môi trường
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
+
 // Hàm thêm sản phẩm
 const addProduct = async (req, res) => {
     try {
@@ -306,26 +316,56 @@ const addProduct = async (req, res) => {
             tonkho, 
             mota 
         } = req.body;
-        const hinhanh = req.file ? `/uploads/${req.file.filename}` : ""; // Lưu đường dẫn ảnh
-        // Thêm sản phẩm vào cơ sở dữ liệu (không truyền idSanPham vì MySQL tự động tăng)
-        const [rows, fields] = await connection.execute(
-            'INSERT INTO sanpham (idChiTietLoaiSanPham, tensp, mausac, xuatxu, hinhanh, diemtb, gia, tonkho, mota) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [ idChiTietLoaiSanPham, tensp, mausac, xuatxu, hinhanh, diemtb, gia, tonkho, mota]
-        );
-        // Lấy đường dẫn của ảnh đã lưu
 
-        // Trả về kết quả
-        return res.json({
-            message: 'Sản phẩm đã được thêm thành công!',
-        });
+        // Lấy đường dẫn ảnh từ req.file
+        const imagePath = req.file.path;
+        console.log('Đường dẫn ảnh:', imagePath);
+
+        // Kiểm tra đường dẫn ảnh trước khi upload lên Cloudinary
+        if (!imagePath) {
+            return res.status(400).json({ message: 'Không tìm thấy ảnh sản phẩm!' });
+        }
+
+        // Sử dụng Promise để upload ảnh lên Cloudinary
+        try {
+            const result = await cloudinary.uploader.upload(imagePath);
+            console.log('Kết quả upload:', result);
+
+            // Kiểm tra nếu có lỗi
+            if (result.error) {
+                console.error('Lỗi upload:', result.error);
+                return res.status(500).json({ message: 'Lỗi upload ảnh' });
+            }
+
+            // Lấy URL của ảnh đã upload
+            const hinhanh = result.secure_url;  // Lấy URL an toàn từ Cloudinary
+            console.log('URL ảnh:', hinhanh);
+            // Lưu thông tin sản phẩm vào database
+            const [rows] = await connection.execute(
+                'INSERT INTO sanpham (idChiTietLoaiSanPham, tensp, mausac, xuatxu, hinhanh, diemtb, gia, tonkho, mota) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [idChiTietLoaiSanPham, tensp, mausac, xuatxu, hinhanh, diemtb, gia, tonkho, mota]
+            );
+            
+            return res.json({
+                message: 'Sản phẩm đã được thêm thành công!',
+                data: rows,  // Trả về dữ liệu sản phẩm vừa thêm
+            });
+
+        } catch (uploadError) {
+            console.error('Lỗi khi upload ảnh:', uploadError);
+            return res.status(500).json({ message: 'Lỗi upload ảnh' });
+        }
+
     } catch (err) {
-        console.error(err);
+        console.error('Lỗi khi thêm sản phẩm:', err);
         return res.status(500).json({
             message: 'Lỗi khi thêm sản phẩm',
             error: err,
         });
     }
 };
+
+
 
 const updateProduct = async (req, res) => {
     try {
@@ -479,7 +519,7 @@ const getProductsByDetailType = async (req, res) => {
                 tensp: product.tensp,
                 mausac: product.mausac,
                 xuatxu: product.xuatxu,
-                hinhanh: row.hinhanh ? `https://node-js-mau.onrender.com${row.hinhanh}` : null, // Tạo đường link ảnh nếu có
+                hinhanh: product.hinhanh,
                 diemtb: product.diemtb,
                 gia: product.gia,
                 tonkho: product.tonkho,
@@ -521,7 +561,7 @@ const allgetProductsByDetailType = async (req, res) => {
                 detailName: detail.tenchitiet,
                 products: products.map(product => ({
                     ...product,
-                    hinhanh: product.hinhanh ? `https://node-js-mau.onrender.com${product.hinhanh}` : null, // Tạo đường link ảnh nếu có
+                    hinhanh: product.hinhanh, // Tạo đường link ảnh nếu có
                 }))
             });
         }
@@ -563,7 +603,7 @@ const getProductById = async (req, res) => {
         // Tạo đường link cho ảnh
         const productWithImage = {
             ...product[0],
-            hinhanh: product[0].hinhanh ? `https://node-js-mau.onrender.com${product[0].hinhanh}` : null,
+            hinhanh: product[0].hinhanh ,
         };
 
         // Trả về thông tin sản phẩm
