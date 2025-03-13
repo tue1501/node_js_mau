@@ -1,48 +1,38 @@
 import connection from '../config/database.js'
 import jwt from 'jsonwebtoken';
 const orderbyid = async (req, res) => {
-    const { id } = req.params; // ID của khách hàng
+    const id = req.user.id;
+    const baseURL = "http://localhost:8080";
+
     try {
-       const authHeader = req.headers['authorization'];
-               if (!authHeader) {
-                   return res.status(401).json({ message: 'No token provided' });
-               }
-       
-               // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
-               const token = authHeader.split(' ')[1];
-               if (!token) {
-                   return res.status(401).json({ message: 'Invalid token format' });
-               }
-       
-               // 3️ Giải mã token để lấy ID người dùng
-               const decoded = jwt.verify(token, process.env.JWT_SECRET);
-               const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
-       
-               // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
-               if (id !== loggedInUserId.toString()) {
-                   return res.status(401).json({ message: 'You have been logged out due to invalid access' });
-               }
-        const [orders] = await connection.execute
-        (`SELECT iddonhang
-            FROM donhang
-            WHERE idKhachHang = ?`,
-            [id]);
+        // Lấy danh sách đơn hàng của khách hàng, bao gồm cả ghi chú
+        const [orders] = await connection.execute(
+            `SELECT iddonhang, ghichu FROM donhang WHERE idKhachHang = ?`,
+            [id]
+        );
+
         const orderDetails = [];
+
         for (const order of orders) {
-                    // Lấy sản phẩm thuộc chi tiết loại sản phẩm
-                    const [products] = await connection.execute(
-                        'SELECT p.tensp , p.gia,c.sl FROM chitietdonhang c LEFT JOIN sanpham p ON c.idSanPham = p.idSanPham  WHERE idDonhang = ?',
-                        [order.iddonhang]
-                    );
-                    // Thêm vào mảng kết quả 
-                    orderDetails.push({
-                        order: order.iddonhang,
-                        products: products
-                    });
-                }
+            // Lấy sản phẩm trong đơn hàng và thông tin ghi chú từ bảng donhang
+            const [products] = await connection.execute(
+                `SELECT p.*, c.sl, CONCAT(?, p.hinhanh) AS hinhanh 
+                 FROM chitietdonhang c 
+                 LEFT JOIN sanpham p ON c.idSanPham = p.idSanPham  
+                 WHERE c.idDonhang = ?`,
+                [baseURL, order.iddonhang]
+            );
+
+            // Thêm vào mảng kết quả 
+            orderDetails.push({
+                iddonhang: order.iddonhang,
+                ghichu: order.ghichu, // Lấy ghi chú từ bảng donhang
+                products: products
+            });
+        }
+
         return res.status(200).json({ data: orderDetails });
-    }
-    catch (err) {
+    } catch (err) {
         console.error(err);
         return res.json({
             message: 'Error fetching products by details',
@@ -50,30 +40,11 @@ const orderbyid = async (req, res) => {
         });
     }
 };
+
 const deleteorder = async (req, res) => {
-    const { id } = req.params;
+    const id = req.user.id; 
     const { iddonhang } = req.body; // Lấy thông tin từ body
     try {
-        const authHeader = req.headers['authorization'];
-                if (!authHeader) {
-                    return res.status(401).json({ message: 'No token provided' });
-                }
-        
-                // 2Token có dạng "Bearer <token>", cần tách phần "<token>"
-                const token = authHeader.split(' ')[1];
-                if (!token) {
-                    return res.status(401).json({ message: 'Invalid token format' });
-                }
-        
-                // 3️ Giải mã token để lấy ID người dùng
-                const decoded = jwt.verify(token, process.env.JWT_SECRET);
-                const loggedInUserId = decoded.id; // ID của người đăng nhập từ token
-        
-                // Kiểm tra nếu ID trong URL và ID người dùng đã đăng nhập không khớp
-                if (id !== loggedInUserId.toString()) {
-                    return res.status(401).json({ message: 'You have been logged out due to invalid access' });
-                }
-
         if (!id) {
             return res.status(400).json({ message: 'Customer ID is required' });
         }

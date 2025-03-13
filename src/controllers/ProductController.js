@@ -21,8 +21,8 @@ import multer from 'multer';
 dotenv.config();
 
 // Cấu hình Twilio
-const accountSid = 'ACc8feb03439456d07ac6446842c3c8d7a';
-const authToken = '5eb5bf21f457ba3d8eeaedd23ce4bd8c';
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
 
 // const accountSid = process.env.TWILIO_ACCOUNT_SID;
 // const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -71,7 +71,7 @@ const sendSms = async (req, res) => {
     );
       const message = await client.messages.create({
         body: messageBody,
-        from: '+18667021741', // Số Twilio
+        from: process.env.TWILIO_PHONE_NUMBER, // Số Twilio
         to,
       });
   
@@ -501,7 +501,7 @@ const getProductsByDetailType = async (req, res) => {
                 tensp: product.tensp,
                 mausac: product.mausac,
                 xuatxu: product.xuatxu,
-                hinhanh: product.hinhanh,
+                hinhanh: row.hinhanh ? `https://node-js-mau.onrender.com${row.hinhanh}` : null, // Tạo đường link ảnh nếu có
                 diemtb: product.diemtb,
                 gia: product.gia,
                 tonkho: product.tonkho,
@@ -524,7 +524,6 @@ const getProductsByDetailType = async (req, res) => {
 
 
 const allgetProductsByDetailType = async (req, res) => {
-
     try {
         // Truy vấn lấy tất cả chi tiết loại sản phẩm
         const [details] = await connection.execute('SELECT * FROM chitietloaisanpham');
@@ -542,7 +541,10 @@ const allgetProductsByDetailType = async (req, res) => {
             // Thêm vào mảng kết quả
             productsByDetails.push({
                 detailName: detail.tenchitiet,
-                products: products
+                products: products.map(product => ({
+                    ...product,
+                    hinhanh: product.hinhanh ? `https://node-js-mau.onrender.com${product.hinhanh}` : null, // Tạo đường link ảnh nếu có
+                }))
             });
         }
         // Trả về dữ liệu sản phẩm theo chi tiết loại sản phẩm
