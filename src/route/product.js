@@ -2,6 +2,7 @@ import express from "express";
 import ProductController from '../controllers/ProductController.js';
 import authenticateJWT from '../middleware/authenticate.js';
 import verifyToken from '../middleware/authenticate.js';
+import authenticateJWTphone from '../middleware/authenticatephone.js';
 import upload from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
@@ -26,9 +27,9 @@ const initAPiRouter = (app) => {
 
     router.post('/send-sms', ProductController.sendSms);
 
-    router.post('/verify-otp', ProductController.verifyOtp);
+    router.post('/verify-otp',authenticateJWTphone,ProductController.verifyOtp);
 
-    router.post('/change-password',  ProductController.changePassword);
+    router.post('/change-password',authenticateJWTphone,ProductController.changePassword);
 
     router.post('/addProductType',  authenticateJWT,ProductController.addProductType);
 

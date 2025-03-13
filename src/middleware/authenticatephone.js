@@ -3,7 +3,7 @@ import { jwtBlacklist } from './jwtBlacklist.js'; // Import blacklist từ jwtBl
 import dotenv from 'dotenv';
 dotenv.config();
 
-const authenticateJWT = (req, res, next) => {
+const authenticateJWTphone = (req, res, next) => {
     const token = req.header('Authorization')?.split(' ')[1];  // Lấy token từ header Authorization
 
     if (!token) {
@@ -18,21 +18,18 @@ const authenticateJWT = (req, res, next) => {
             return res.status(403).json({ success: false, message: 'Token is blacklisted' });
         }
 
-        // Kiểm tra id của người dùng
-        if (!decoded.id) {
-            return res.status(400).json({ success: false, message: 'Invalid token, user ID missing' });
-        }
-
         req.user = decoded;  // Gán thông tin người dùng vào req.user để sử dụng trong các route
         next();  // Tiếp tục xử lý yêu cầu
     } catch (err) {
+        
         return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+
     }
 };
 
-export default authenticateJWT; 
+export default authenticateJWTphone; 
 
-export const verifyToken = (req, res, next) => {
+export const verifyTokenphone = (req, res, next) => {
     try {
         const token = req.headers.authorization?.split(" ")[1]; // Lấy token từ header
         if (!token) {

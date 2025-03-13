@@ -21,11 +21,9 @@ import multer from 'multer';
 dotenv.config();
 
 // Cấu hình Twilio
-const accountSid = 'ACc8feb03439456d07ac6446842c3c8d7a';
-const authToken = '5eb5bf21f457ba3d8eeaedd23ce4bd8c';
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
 
-// const accountSid = process.env.TWILIO_ACCOUNT_SID;
-// const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = new twilio(accountSid, authToken);
 
 // Bộ nhớ tạm thời để lưu OTP (nên thay bằng Redis hoặc Database trong thực tế)
@@ -71,7 +69,7 @@ const sendSms = async (req, res) => {
     );
       const message = await client.messages.create({
         body: messageBody,
-        from: '+18667021741', // Số Twilio
+        from: process.env.TWILIO_PHONE_NUMBER, // Số Twilio
         to,
       });
   
@@ -94,26 +92,7 @@ const sendSms = async (req, res) => {
 const verifyOtp = async (req, res) => {
     try {
         const { otp } = req.body;
-        const authHeader = req.headers['authorization'];
-
-        // Kiểm tra xem có token trong header không
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ success: false, error: "Unauthorized: No token provided" });
-        }
-
-        // Giải mã token
-        const token = authHeader.split(' ')[1];
-        let decoded;
-
-        try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET); // Kiểm tra tính hợp lệ của token
-        } catch (err) {
-            return res.status(401).json({ success: false, error: "Invalid or expired token" });
-        }
-
-        // Lấy số điện thoại từ token (giả sử token chứa thông tin số điện thoại)
-        const phoneNumber = decoded.sdt; // Số điện thoại lưu trong token
-
+        const phoneNumber = req.user.sdt; // Lấy ID từ token đã giải mã
         if (!phoneNumber || !otp) {
             return res.status(400).json({ success: false, error: "Missing 'phoneNumber' or 'otp' field" });
         }
@@ -159,6 +138,7 @@ dotenv.config();
 const changePassword = async (req, res) => {
     try {
       const { newPassword } = req.body;
+
       const authHeader = req.headers['authorization'];
 
         // Kiểm tra xem có token trong header không
@@ -175,9 +155,7 @@ const changePassword = async (req, res) => {
         } catch (err) {
             return res.status(401).json({ success: false, error: "Invalid or expired token" });
         }
-
-        // Lấy số điện thoại từ token (giả sử token chứa thông tin số điện thoại)
-        const phoneNumber = decoded.sdt; // Số điện thoại lưu trong token
+    const phoneNumber = decoded.sdt; // Số điện thoại lưu trong token
     const passwordRegex = /^.{8,}$/;  // Mật khẩu phải có ít nhất 8 ký tự
     if (!passwordRegex.test(newPassword)) {
         return res.status(400).json({ message: "Password must be at least 8 characters long." });        
@@ -248,7 +226,7 @@ const changePassword = async (req, res) => {
   
 
 
-  const getAllproduct = async (req, res) => {
+const getAllproduct = async (req, res) => {
     try {
         // Truy vấn tất cả sản phẩm với các trường cần thiết, bao gồm trường 'hinhanh'
         const [rows, fields] = await connection.execute('SELECT * FROM sanpham');
@@ -501,7 +479,7 @@ const getProductsByDetailType = async (req, res) => {
                 tensp: product.tensp,
                 mausac: product.mausac,
                 xuatxu: product.xuatxu,
-                hinhanh: product.hinhanh,
+                hinhanh: row.hinhanh ? `https://node-js-mau.onrender.com${row.hinhanh}` : null, // Tạo đường link ảnh nếu có
                 diemtb: product.diemtb,
                 gia: product.gia,
                 tonkho: product.tonkho,
@@ -524,7 +502,6 @@ const getProductsByDetailType = async (req, res) => {
 
 
 const allgetProductsByDetailType = async (req, res) => {
-
     try {
         // Truy vấn lấy tất cả chi tiết loại sản phẩm
         const [details] = await connection.execute('SELECT * FROM chitietloaisanpham');
@@ -542,7 +519,10 @@ const allgetProductsByDetailType = async (req, res) => {
             // Thêm vào mảng kết quả
             productsByDetails.push({
                 detailName: detail.tenchitiet,
-                products: products
+                products: products.map(product => ({
+                    ...product,
+                    hinhanh: product.hinhanh ? `https://node-js-mau.onrender.com${product.hinhanh}` : null, // Tạo đường link ảnh nếu có
+                }))
             });
         }
         // Trả về dữ liệu sản phẩm theo chi tiết loại sản phẩm
@@ -580,9 +560,15 @@ const getProductById = async (req, res) => {
             return res.status(404).json({ message: 'Product not found' });
         }
 
+        // Tạo đường link cho ảnh
+        const productWithImage = {
+            ...product[0],
+            hinhanh: product[0].hinhanh ? `https://node-js-mau.onrender.com${product[0].hinhanh}` : null,
+        };
+
         // Trả về thông tin sản phẩm
         return res.json({
-            data: product[0], // Chỉ trả về sản phẩm đầu tiên (nếu tìm thấy)
+            data: productWithImage, // Trả về sản phẩm với đường link ảnh
         });
     } catch (err) {
         console.error(err);
