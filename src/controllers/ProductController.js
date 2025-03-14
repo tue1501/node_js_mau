@@ -581,16 +581,9 @@ const getProductById = async (req, res) => {
     try {
         const { id } = req.params; // Lấy idSanPham từ URL
 
-        // Truy vấn lấy thông tin sản phẩm từ cơ sở dữ liệu
+        // Truy vấn lấy thông tin sản phẩm từ bảng sanpham
         const [product] = await connection.execute(
-            `
-            SELECT 
-                *
-            FROM 
-                sanpham
-            WHERE 
-                idSanPham = ?
-            `,
+            `SELECT * FROM sanpham WHERE idSanPham = ?`,
             [id]
         );
 
@@ -599,24 +592,36 @@ const getProductById = async (req, res) => {
             return res.status(404).json({ message: 'Product not found' });
         }
 
-        // Tạo đường link cho ảnh
-        const productWithImage = {
+        // Truy vấn lấy danh sách màu sắc và hình ảnh từ bảng sanpham_mau_hinhanh
+        const [colorsAndImages] = await connection.execute(
+            `SELECT tenmau, hinhanh,so_luong FROM sanpham_mau_hinhanh WHERE idSanPham = ?`,
+            [id]
+        );
+
+        // Đếm số lượng màu sắc có trong danh sách
+        const totalColors = colorsAndImages.length;
+
+        // Thêm danh sách màu sắc, hình ảnh và tổng số màu vào sản phẩm
+        const productWithDetails = {
+            totalColors: totalColors, // Số lượng màu của sản phẩm
             ...product[0],
-            hinhanh: product[0].hinhanh ,
+            colors: colorsAndImages, // Danh sách màu sắc và hình ảnh
         };
 
         // Trả về thông tin sản phẩm
         return res.json({
-            data: productWithImage, // Trả về sản phẩm với đường link ảnh
+            data: productWithDetails
         });
     } catch (err) {
         console.error(err);
         return res.status(500).json({
             message: 'Error fetching product',
-            error: err,
+            error: err
         });
     }
 };
+
+
 
 
 
