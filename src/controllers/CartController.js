@@ -4,36 +4,38 @@ const CartController = {
     // Thêm sản phẩm vào giỏ hàng
     async addToCart(req, res) {
         try {
-            // Lấy token từ header Authorization
-            
+            // Lấy ID khách hàng từ token
             const idkhachhang = req.user.id;
     
-            //  Lấy `idsanpham` từ request body
-            const { idsanpham } = req.body;
+            // Lấy idsanpham và số lượng từ request body
+            const { idsanpham, sl } = req.body;
     
             if (!idsanpham) {
                 return res.status(400).json({ message: 'Product ID is required' });
             }
     
-            //  Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
+            // Kiểm tra số lượng hợp lệ
+            const quantityToAdd = parseInt(sl) > 0 ? parseInt(sl) : 1;
+    
+            // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
             const [existingProduct] = await connection.query(
                 'SELECT * FROM giohang WHERE idkhachhang = ? AND idsanpham = ?',
                 [idkhachhang, idsanpham]
             );
     
             if (existingProduct.length > 0) {
-                // Nếu sản phẩm đã có, cộng thêm 1 vào số lượng
-                const newQuantity = existingProduct[0].sl + 1;
+                // Nếu sản phẩm đã có, cộng thêm số lượng mới vào số lượng cũ
+                const newQuantity = existingProduct[0].sl + quantityToAdd;
                 await connection.query(
                     'UPDATE giohang SET sl = ? WHERE idkhachhang = ? AND idsanpham = ?',
                     [newQuantity, idkhachhang, idsanpham]
                 );
                 return res.status(200).json({ message: 'Product quantity updated in cart' });
             } else {
-                // Nếu sản phẩm chưa có, thêm mới vào giỏ hàng với số lượng = 1
+                // Nếu sản phẩm chưa có, thêm mới vào giỏ hàng với số lượng đã chọn
                 await connection.query(
                     'INSERT INTO giohang (idkhachhang, idsanpham, sl) VALUES (?, ?, ?)',
-                    [idkhachhang, idsanpham, 1]  // Đặt số lượng mặc định là 1
+                    [idkhachhang, idsanpham, quantityToAdd]
                 );
                 return res.status(201).json({ message: 'Product added to cart' });
             }

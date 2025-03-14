@@ -9,8 +9,7 @@ import bcrypt from 'bcrypt';
 // Sử dụng import (ES Modules)
 import { fileURLToPath } from "url";
 import path from "path";
-import fs from "fs";
-
+import fs from 'fs/promises'; // Import fs.promises để dùng với async/await
 // Tạo __dirname theo cách thủ công trong ES module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -780,10 +779,97 @@ const updateProductTypeDetail = async (req, res) => {
 };
 
 
+const synonymsFilePath = path.join(__dirname, '../config/synonyms.json');
+
+// Hàm tìm kiếm sản phẩm
+const search = async (req, res) => {
+  try {
+    const { query } = req.body;
+
+    if (!query || query.trim() === "") {
+      return res.status(400).json({ message: "Vui lòng nhập từ khóa tìm kiếm" });
+    }
+
+    // Tách từng từ trong query
+    const queryTerms = query.trim().toLowerCase().split(' ');
+    console.log("Original query terms:", queryTerms);
+
+    // Đọc file synonyms.json
+    let synonymsData = {};
+    try {
+      const data = await fs.readFile(synonymsFilePath, 'utf8');
+      synonymsData = JSON.parse(data);
+    } catch (err) {
+      console.error("Error reading synonyms file:", err);
+    }
+
+    // Ánh xạ từ đồng nghĩa cho từng từ
+    const searchTerms = queryTerms.map(term => {
+      return synonymsData[term] || term; // Nếu có từ đồng nghĩa thì dùng, không thì giữ nguyên
+    });
+    console.log("Search terms after synonym:", searchTerms);
+
+    // Query SQL với collation accent-sensitive
+    const sqlQuery = `
+      SELECT 
+        sp.idSanPham,
+        sp.tensp,
+        sp.mausac,
+        sp.xuatxu,
+        sp.gia,
+        sp.tonkho,
+        sp.mota,
+        ctlsp.tenchitiet,
+        lsp.tenloai,
+        (CASE
+            WHEN sp.tensp LIKE ? COLLATE utf8mb4_bin THEN 3
+            WHEN sp.mota LIKE ? COLLATE utf8mb4_bin THEN 2
+            ELSE 1
+        END) AS relevance_score
+      FROM sanpham sp
+      JOIN chitietloaisanpham ctlsp ON sp.idChiTietLoaiSanPham = ctlsp.idChiTietLoaiSanPham
+      JOIN loaisanpham lsp ON ctlsp.idLoaiSanPham = lsp.idLoaiSanPham
+      WHERE 
+        sp.tensp LIKE ? COLLATE utf8mb4_bin
+        OR sp.mota LIKE ? COLLATE utf8mb4_bin
+        OR ctlsp.tenchitiet LIKE ? COLLATE utf8mb4_bin
+        OR lsp.tenloai LIKE ? COLLATE utf8mb4_bin
+      ORDER BY relevance_score DESC;
+    `;
+
+    // Tìm kiếm từng từ và tổng hợp kết quả
+    let allResults = [];
+    for (const term of searchTerms) {
+      const likeTerm = `%${term}%`;
+      const [results] = await connection.execute(sqlQuery, [
+        likeTerm,
+        likeTerm,
+        likeTerm,
+        likeTerm,
+        likeTerm,
+        likeTerm,
+      ]);
+      allResults = allResults.concat(results); // Gộp kết quả
+    }
+
+    // Loại bỏ kết quả trùng lặp (dựa trên idSanPham)
+    const uniqueResults = Array.from(
+      new Map(allResults.map(item => [item.idSanPham, item])).values()
+    );
+
+    if (uniqueResults.length === 0) {
+      return res.status(200).json({ message: "Không tìm thấy sản phẩm nào", results: [] });
+    }
+    return res.status(200).json({ results: uniqueResults });
+  } catch (error) {
+    console.error("Error during search:", error);
+    return res.status(500).json({ message: "Đã có lỗi xảy ra trong quá trình tìm kiếm" });
+  }
+};
 
 // Xuất khẩu hàm getAllUsers
 export default {
     getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType
     ,getProductById,sendSms,verifyOtp,changePassword, addProduct,addProductType
-    ,addProductTypeDetail,updateProductType,updateProductTypeDetail,updateProduct
+    ,addProductTypeDetail,updateProductType,updateProductTypeDetail,updateProduct,search
 };

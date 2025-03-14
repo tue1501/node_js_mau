@@ -41,6 +41,8 @@ const initAPiRouter = (app) => {
 
     router.put('/updateProduct/:id', upload.single('hinhanh'), ProductController.updateProduct);
 
+    router.post('/search', ProductController.search);
+
     return app.use('/api', router);
 }
 export default initAPiRouter ;
