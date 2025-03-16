@@ -7,35 +7,35 @@ const CartController = {
             // Lấy ID khách hàng từ token
             const idkhachhang = req.user.id;
     
-            // Lấy idsanpham và số lượng từ request body
-            const { idsanpham, sl } = req.body;
+            // Lấy idmau và số lượng từ request body
+            const { idmau, sl } = req.body;
     
-            if (!idsanpham) {
-                return res.status(400).json({ message: 'Product ID is required' });
+            if (!idmau) {
+                return res.status(400).json({ message: 'Product Color ID is required' });
             }
     
-            // Kiểm tra số lượng hợp lệ
+            // Kiểm tra số lượng hợp lệ, nếu không có thì mặc định là 1
             const quantityToAdd = parseInt(sl) > 0 ? parseInt(sl) : 1;
     
-            // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
+            // Kiểm tra xem sản phẩm (màu sắc) đã có trong giỏ hàng chưa
             const [existingProduct] = await connection.query(
-                'SELECT * FROM giohang WHERE idkhachhang = ? AND idsanpham = ?',
-                [idkhachhang, idsanpham]
+                'SELECT * FROM giohang WHERE idkhachhang = ? AND idMau = ?',
+                [idkhachhang, idmau]
             );
     
             if (existingProduct.length > 0) {
-                // Nếu sản phẩm đã có, cộng thêm số lượng mới vào số lượng cũ
+                // Nếu sản phẩm (màu sắc) đã có, cộng thêm số lượng mới vào số lượng cũ
                 const newQuantity = existingProduct[0].sl + quantityToAdd;
                 await connection.query(
-                    'UPDATE giohang SET sl = ? WHERE idkhachhang = ? AND idsanpham = ?',
-                    [newQuantity, idkhachhang, idsanpham]
+                    'UPDATE giohang SET sl = ? WHERE idkhachhang = ? AND idMau = ?',
+                    [newQuantity, idkhachhang, idmau]
                 );
                 return res.status(200).json({ message: 'Product quantity updated in cart' });
             } else {
                 // Nếu sản phẩm chưa có, thêm mới vào giỏ hàng với số lượng đã chọn
                 await connection.query(
-                    'INSERT INTO giohang (idkhachhang, idsanpham, sl) VALUES (?, ?, ?)',
-                    [idkhachhang, idsanpham, quantityToAdd]
+                    'INSERT INTO giohang (idkhachhang, idMau, sl) VALUES (?, ?, ?)',
+                    [idkhachhang, idmau, quantityToAdd]
                 );
                 return res.status(201).json({ message: 'Product added to cart' });
             }
@@ -43,34 +43,33 @@ const CartController = {
             console.error('Error in addToCart:', error);
             res.status(500).json({ message: 'Server error' });
         }
-    },    
+    },        
     // Lấy giỏ hàng của người dùng
     async getCart(req, res) {
         try {
             const id = req.user.id;
-            // Lấy các sản phẩm trong giỏ hàng của người dùng
+            // Lấy các sản phẩm trong giỏ hàng của người dùng theo idMau
             const [cartItems] = await connection.query(
-                `SELECT c.idgiohanghang, c.idsanpham, c.sl, p.tensp, p.mausac, p.xuatxu, 
-                p.hinhanh , 
-                p.diemtb, p.gia, p.tonkho, p.mota
-                FROM giohang c
-                INNER JOIN sanpham p ON c.idsanpham = p.idSanPham
-                WHERE c.idkhachhang = ?`,
+                `SELECT c.idgiohanghang , c.idMau, c.sl, 
+                        sp.tensp, sp.xuatxu, sp.diemtb, sp.gia, sp.tonkho, sp.mota, 
+                        m.tenmau, m.hinhanh 
+                 FROM giohang c
+                 INNER JOIN sanpham_mau_hinhanh m ON c.idMau = m.id
+                 INNER JOIN sanpham sp ON m.idSanPham = sp.idSanPham
+                 WHERE c.idkhachhang = ?`,
                 [id]
             );
-            
+    
             if (cartItems.length === 0) {
                 return res.status(404).json({ message: 'Your cart is empty' });
             }
-            
+    
             return res.status(200).json({ cart: cartItems });
         } catch (error) {
             console.error(error);
             res.status(500).json({ message: 'Server error' });
         }
     },
-
-
     // Xóa sản phẩm khỏi giỏ hàng
     async removeFromCart(req, res) {
         const { idgiohanghang } = req.params;    
@@ -87,15 +86,15 @@ const CartController = {
     },
 
     async changeQuantity(req, res) {
-        const { idsanpham, status } = req.body;
+        const { idmau, status } = req.body;
     
         try {
-           
             const idkhachhang = req.user.id;
+    
             // Kiểm tra xem sản phẩm có trong giỏ hàng không
             const [existingProduct] = await connection.query(
-                'SELECT * FROM giohang WHERE idkhachhang = ? AND idsanpham = ?',
-                [idkhachhang, idsanpham]
+                'SELECT * FROM giohang WHERE idkhachhang = ? AND idMau = ?',
+                [idkhachhang, idmau]
             );
     
             if (existingProduct.length === 0) {
@@ -111,15 +110,15 @@ const CartController = {
                 if (newQuantity <= 0) {
                     // Nếu số lượng còn lại <= 0, xóa sản phẩm khỏi giỏ hàng
                     await connection.query(
-                        'DELETE FROM giohang WHERE idkhachhang = ? AND idsanpham = ?',
-                        [idkhachhang, idsanpham]
+                        'DELETE FROM giohang WHERE idkhachhang = ? AND idMau = ?',
+                        [idkhachhang, idmau]
                     );
                     return res.status(200).json({ message: 'Product removed from cart' });
                 } else {
                     // Nếu số lượng > 0, chỉ cập nhật số lượng
                     await connection.query(
-                        'UPDATE giohang SET sl = ? WHERE idkhachhang = ? AND idsanpham = ?',
-                        [newQuantity, idkhachhang, idsanpham]
+                        'UPDATE giohang SET sl = ? WHERE idkhachhang = ? AND idMau = ?',
+                        [newQuantity, idkhachhang, idmau]
                     );
                     return res.status(200).json({ message: 'Product quantity decreased' });
                 }
@@ -130,8 +129,8 @@ const CartController = {
                 newQuantity = existingProduct[0].sl + 1;
     
                 await connection.query(
-                    'UPDATE giohang SET sl = ? WHERE idkhachhang = ? AND idsanpham = ?',
-                    [newQuantity, idkhachhang, idsanpham]
+                    'UPDATE giohang SET sl = ? WHERE idkhachhang = ? AND idMau = ?',
+                    [newQuantity, idkhachhang, idmau]
                 );
                 return res.status(200).json({ message: 'Product quantity increased' });
             }
@@ -143,7 +142,7 @@ const CartController = {
             console.error(error);
             res.status(500).json({ message: 'Server error' });
         }
-    },    
+    }      
 };
 
 export default CartController;
