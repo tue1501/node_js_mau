@@ -686,7 +686,7 @@ const getProductById = async (req, res) => {
         }
 
         const [colorsAndImages] = await connection.execute(
-            `SELECT id AS idmau, tenmau, hinhanh FROM sanpham_mau_hinhanh WHERE idSanPham = ?`,
+            `SELECT id AS idmau, tenmau, hinhanh,so_luong FROM sanpham_mau_hinhanh WHERE idSanPham = ?`,
             [id]
         );
         
