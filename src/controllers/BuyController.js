@@ -68,6 +68,7 @@ const Pay = async (req, res) => {
     const idkhachhang = req.user.id; // Lấy ID từ token đã giải mã
 
     try {
+        // Kiểm tra mảng idMau và quantity
         if (!Array.isArray(idMau) || idMau.length === 0 || !Array.isArray(quantity) || quantity.length !== idMau.length) {
             return res.status(400).json({ message: 'Invalid product color-image IDs or quantities provided' });
         }
@@ -76,6 +77,7 @@ const Pay = async (req, res) => {
             return res.status(400).json({ message: 'Invalid payment method' });
         }
 
+        // Lấy thông tin khách hàng
         const [customer] = await connection.execute(
             'SELECT hoten, sdt, diachi FROM khachhang WHERE idKhachHang = ?',
             [idkhachhang]
@@ -87,6 +89,7 @@ const Pay = async (req, res) => {
 
         const { hoten: customerName, sdt: customerPhone, diachi: customerAddress } = customer[0];
 
+        // Kiểm tra mã giảm giá nếu có
         if (iddiscount) {
             const [discountDetails] = await connection.execute(
                 'SELECT * FROM chitietgiamgia WHERE idKhachHang = ? AND idGiamGia = ? AND trangthai = 0',
@@ -99,7 +102,7 @@ const Pay = async (req, res) => {
         }
 
         // Lấy thông tin sản phẩm dựa trên `idMau`
-        const placeholders = idMau.map(() => '?').join(',');
+        const placeholders = idMau.map(() => '?').join(',');  // Tạo các placeholders cho mảng
         const [products] = await connection.execute(
             `SELECT smh.idSanPham, smh.id as idMau, s.tensp, s.gia, smh.hinhanh, smh.tenmau
              FROM sanpham_mau_hinhanh smh
@@ -115,6 +118,7 @@ const Pay = async (req, res) => {
             total += product.gia * productQuantity;
         }
 
+        // Tính toán giảm giá nếu có
         if (iddiscount) {
             const [discount] = await connection.execute(
                 'SELECT * FROM giamgia WHERE idGiamGia = ?',
@@ -149,6 +153,7 @@ const Pay = async (req, res) => {
             }
         }
 
+        // Tạo đơn hàng
         const now = new Date();
         const ttCod = paymentMethod === 'COD' ? 1 : 0;
         const ttOnline = paymentMethod === 'VNPay' ? 1 : 0;
@@ -171,6 +176,7 @@ const Pay = async (req, res) => {
 
         await Promise.all(detailsPromises);
 
+        // Cập nhật trạng thái mã giảm giá nếu có
         if (iddiscount) {
             await connection.execute(
                 'UPDATE chitietgiamgia SET trangthai = 1 WHERE idKhachHang = ? AND idGiamGia = ?',
@@ -178,6 +184,14 @@ const Pay = async (req, res) => {
             );
         }
 
+        // Xóa các sản phẩm đã mua trong giỏ hàng
+        const placeholdersForCart = idMau.map(() => '?').join(',');  // Tạo các placeholders cho mảng
+        await connection.execute(
+            `DELETE FROM giohang WHERE idKhachHang = ? AND idMau IN (${placeholdersForCart})`,
+            [idkhachhang, ...idMau]  // Truyền idkhachhang và các idMau vào câu lệnh
+        );
+
+        // Lấy chi tiết đơn hàng để trả về kết quả
         const [orderDetails] = await connection.execute(
             `SELECT c.idMau, s.tensp, smh.tenmau, c.sl, s.gia, smh.hinhanh
              FROM chitietdonhang c
@@ -187,7 +201,7 @@ const Pay = async (req, res) => {
             [orderId]
         );
 
-        // Gọi hàm thanh toán MoMo và truyền mã đơn hàng và mô tả
+        // Gọi hàm thanh toán MoMo nếu phương thức thanh toán là MoMo
         if (paymentMethod === 'MoMo') {
             return payment(req, res, orderId, total, note);  
         } else {
@@ -208,6 +222,9 @@ const Pay = async (req, res) => {
         return res.status(500).json({ message: 'Server error', error });
     }
 };
+
+
+
 
 
 export default {
