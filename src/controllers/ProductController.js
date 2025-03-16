@@ -617,26 +617,25 @@ const getProductById = async (req, res) => {
             return res.status(404).json({ message: 'Product not found' });
         }
 
-        // Truy vấn lấy danh sách màu sắc và hình ảnh từ bảng sanpham_mau_hinhanh
         const [colorsAndImages] = await connection.execute(
-            `SELECT tenmau, hinhanh,so_luong FROM sanpham_mau_hinhanh WHERE idSanPham = ?`,
+            `SELECT id AS idmau, tenmau, hinhanh FROM sanpham_mau_hinhanh WHERE idSanPham = ?`,
             [id]
         );
-
+        
         // Đếm số lượng màu sắc có trong danh sách
         const totalColors = colorsAndImages.length;
-
+        
         // Thêm danh sách màu sắc, hình ảnh và tổng số màu vào sản phẩm
         const productWithDetails = {
             totalColors: totalColors, // Số lượng màu của sản phẩm
             ...product[0],
-            colors: colorsAndImages, // Danh sách màu sắc và hình ảnh
+            colors: colorsAndImages, // Danh sách màu sắc và hình ảnh (đã đổi `id` thành `idmau`)
         };
-
+        
         // Trả về thông tin sản phẩm
         return res.json({
             data: productWithDetails
-        });
+        });        
     } catch (err) {
         console.error(err);
         return res.status(500).json({

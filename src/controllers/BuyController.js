@@ -64,20 +64,20 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
 
 // Hàm Pay để xử lý đơn hàng và phương thức thanh toán
 const Pay = async (req, res) => {
-    const {  idsanpham, note, iddiscount, quantity, paymentMethod } = req.body;
-    const idkhachhang = req.user.id; // Lấy ID từ token đã giải mã\
+    const { idMauHinhAnh, note, iddiscount, quantity, paymentMethod } = req.body;
+    const idkhachhang = req.user.id; // Lấy ID từ token đã giải mã
 
     try {
-        if (!Array.isArray(idsanpham) || idsanpham.length === 0 || !Array.isArray(quantity) || quantity.length !== idsanpham.length) {
-            return res.status(400).json({ message: 'Invalid products or quantities provided' });
+        if (!Array.isArray(idMauHinhAnh) || idMauHinhAnh.length === 0 || !Array.isArray(quantity) || quantity.length !== idMauHinhAnh.length) {
+            return res.status(400).json({ message: 'Invalid product color-image IDs or quantities provided' });
         }
 
-        if (!['COD', 'VNPay', 'MoMo'].includes(paymentMethod)) {
+        if (!['COD', 'MoMo'].includes(paymentMethod)) {
             return res.status(400).json({ message: 'Invalid payment method' });
         }
 
         const [customer] = await connection.execute(
-            'SELECT hoten, sdt FROM khachhang WHERE idKhachHang = ?',
+            'SELECT hoten, sdt, diachi FROM khachhang WHERE idKhachHang = ?',
             [idkhachhang]
         );
 
@@ -98,16 +98,20 @@ const Pay = async (req, res) => {
             }
         }
 
-        const placeholders = idsanpham.map(() => '?').join(',');
+        // Lấy thông tin sản phẩm dựa trên `idMauHinhAnh`
+        const placeholders = idMauHinhAnh.map(() => '?').join(',');
         const [products] = await connection.execute(
-            `SELECT idSanPham, tensp, gia FROM sanpham WHERE idSanPham IN (${placeholders})`,
-            idsanpham
+            `SELECT smh.idSanPham, smh.idMauHinhAnh, s.tensp, s.gia, smh.hinhanh, smh.tenmau
+             FROM sanpham_mau_hinhanh smh
+             JOIN sanpham s ON smh.idSanPham = s.idSanPham
+             WHERE smh.idMauHinhAnh IN (${placeholders})`,
+            idMauHinhAnh
         );
 
         let total = 0;
         for (let i = 0; i < products.length; i++) {
             const product = products[i];
-            const productQuantity = quantity[idsanpham.indexOf(product.idSanPham)] || 1;
+            const productQuantity = quantity[idMauHinhAnh.indexOf(product.idMauHinhAnh)] || 1;
             total += product.gia * productQuantity;
         }
 
@@ -156,11 +160,12 @@ const Pay = async (req, res) => {
 
         const orderId = orderResult.insertId;
 
-        const detailsPromises = idsanpham.map((productId, index) => {
+        // Lưu thông tin chi tiết đơn hàng
+        const detailsPromises = idMauHinhAnh.map((colorImageId, index) => {
             const productQuantity = quantity[index];
             return connection.query(
-                'INSERT INTO chitietdonhang (idSanPham, idDonhang, sl, iddanhgia) VALUES (?, ?, ?, null)',
-                [productId, orderId, productQuantity]
+                'INSERT INTO chitietdonhang (idMauHinhAnh, idDonhang, sl, iddanhgia) VALUES (?, ?, ?, null)',
+                [colorImageId, orderId, productQuantity]
             );
         });
 
@@ -174,13 +179,17 @@ const Pay = async (req, res) => {
         }
 
         const [orderDetails] = await connection.execute(
-            'SELECT c.idSanPham, s.tensp, c.sl, s.gia FROM chitietdonhang c JOIN sanpham s ON c.idSanPham = s.idSanPham WHERE c.idDonhang = ?',
+            `SELECT c.idMauHinhAnh, s.tensp, smh.tenmau, c.sl, s.gia, smh.hinhanh
+             FROM chitietdonhang c
+             JOIN sanpham_mau_hinhanh smh ON c.idMauHinhAnh = smh.idMauHinhAnh
+             JOIN sanpham s ON smh.idSanPham = s.idSanPham
+             WHERE c.idDonhang = ?`,
             [orderId]
         );
 
         // Gọi hàm thanh toán MoMo và truyền mã đơn hàng và mô tả
         if (paymentMethod === 'MoMo') {
-            return payment(req, res, orderId, total, note);  // Truyền mã đơn hàng, tổng tiền và mô tả đơn hàng
+            return payment(req, res, orderId, total, note);  
         } else {
             return res.status(200).json({
                 message: 'Order placed successfully',
@@ -199,6 +208,7 @@ const Pay = async (req, res) => {
         return res.status(500).json({ message: 'Server error', error });
     }
 };
+
 
 export default {
     Pay,

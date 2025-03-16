@@ -8,10 +8,26 @@ const CartController = {
             const idkhachhang = req.user.id;
     
             // Lấy idmau và số lượng từ request body
-            const { idmau, sl } = req.body;
+            let { idmau, sl } = req.body;
     
             if (!idmau) {
                 return res.status(400).json({ message: 'Product Color ID is required' });
+            }
+    
+            // Ép kiểu idmau thành số nguyên
+            idmau = parseInt(idmau);
+            if (isNaN(idmau)) {
+                return res.status(400).json({ message: 'Invalid Product Color ID' });
+            }
+    
+            // Kiểm tra xem idMau có tồn tại trong bảng sanpham_mau_hinhanh hay không
+            const [colorExists] = await connection.query(
+                'SELECT id FROM sanpham_mau_hinhanh WHERE id = ?',
+                [idmau]
+            );
+    
+            if (colorExists.length === 0) {
+                return res.status(404).json({ message: 'Product color not found' });
             }
     
             // Kiểm tra số lượng hợp lệ, nếu không có thì mặc định là 1
@@ -24,7 +40,7 @@ const CartController = {
             );
     
             if (existingProduct.length > 0) {
-                // Nếu sản phẩm (màu sắc) đã có, cộng thêm số lượng mới vào số lượng cũ
+                // Nếu sản phẩm đã có, cập nhật số lượng
                 const newQuantity = existingProduct[0].sl + quantityToAdd;
                 await connection.query(
                     'UPDATE giohang SET sl = ? WHERE idkhachhang = ? AND idMau = ?',
@@ -32,7 +48,7 @@ const CartController = {
                 );
                 return res.status(200).json({ message: 'Product quantity updated in cart' });
             } else {
-                // Nếu sản phẩm chưa có, thêm mới vào giỏ hàng với số lượng đã chọn
+                // Nếu sản phẩm chưa có, thêm mới vào giỏ hàng
                 await connection.query(
                     'INSERT INTO giohang (idkhachhang, idMau, sl) VALUES (?, ?, ?)',
                     [idkhachhang, idmau, quantityToAdd]
@@ -43,7 +59,7 @@ const CartController = {
             console.error('Error in addToCart:', error);
             res.status(500).json({ message: 'Server error' });
         }
-    },        
+    },     
     // Lấy giỏ hàng của người dùng
     async getCart(req, res) {
         try {

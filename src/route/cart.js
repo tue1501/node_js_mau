@@ -13,6 +13,8 @@ const Cart = (app) => {
     // Xóa sản phẩm khỏi giỏ hàng
     router.delete('/remove-from-cart/:idgiohang',authenticateJWT, CartController.removeFromCart);
 
+    router.delete('/remove-from-cart',authenticateJWT, CartController.removeMultipleFromCart);
+
     return app.use('/api', router);
 }
 export default Cart;
