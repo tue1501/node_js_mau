@@ -3,13 +3,14 @@ import ProductController from '../controllers/ProductController.js';
 import authenticateJWT from '../middleware/authenticate.js';
 import verifyToken from '../middleware/authenticate.js';
 import authenticateJWTphone from '../middleware/authenticatephone.js';
-import upload from '../middleware/uploadMiddleware.js';
+import upload from '../middleware/upload.js';
+import { uploadMultiple } from "../middleware/upload.js"; // Import middleware
 
 const router = express.Router();
 const initAPiRouter = (app) => {
     router.get('/product',[authenticateJWT,verifyToken],ProductController.getAllproduct)
 
-    router.post('/add-product', upload.single("hinhanh"), ProductController.addProduct);
+    router.post('/add-product', uploadMultiple, ProductController.addProduct);
 
     router.get('/producttype',authenticateJWT,ProductController.producttype)
 

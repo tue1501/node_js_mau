@@ -72,18 +72,52 @@ const CartController = {
     },
     // Xóa sản phẩm khỏi giỏ hàng
     async removeFromCart(req, res) {
-        const { idgiohanghang } = req.params;    
+        const { idgiohang } = req.params; // Sửa lại đúng tên biến
         try {
+            // Kiểm tra xem sản phẩm có trong giỏ hàng không
+            const [existingProduct] = await connection.query(
+                'SELECT * FROM giohang WHERE idgiohanghang = ?',
+                [idgiohang]
+            );
+    
+            if (existingProduct.length === 0) {
+                return res.status(404).json({ message: 'Product not found in cart' });
+            }
+    
+            // Nếu tồn tại thì xóa
             await connection.query(
                 'DELETE FROM giohang WHERE idgiohanghang = ?',
-                [idgiohanghang]
+                [idgiohang]
             );
+    
             return res.status(200).json({ message: 'Product removed from cart' });
         } catch (error) {
-            console.error(error);
+            console.error('Error in removeFromCart:', error);
             res.status(500).json({ message: 'Server error' });
         }
-    },
+    },    
+    async removeMultipleFromCart(req, res) {
+        try {
+            const { idgiohangArray } = req.body; // Nhận danh sách ID từ request body
+    
+            if (!Array.isArray(idgiohangArray) || idgiohangArray.length === 0) {
+                return res.status(400).json({ message: 'Invalid request. Provide an array of product IDs.' });
+            }
+    
+            console.log("IDs cần xóa:", idgiohangArray); // Debug log
+    
+            // Xóa các sản phẩm có ID nằm trong mảng
+            const placeholders = idgiohangArray.map(() => '?').join(','); // Tạo dấu ? cho truy vấn SQL
+            const query = `DELETE FROM giohang WHERE idgiohanghang IN (${placeholders})`;
+    
+            await connection.query(query, idgiohangArray);
+    
+            return res.status(200).json({ message: 'Products removed from cart' });
+        } catch (error) {
+            console.error('Error in removeMultipleFromCart:', error);
+            return res.status(500).json({ message: 'Server error' });
+        }
+    },    
 
     async changeQuantity(req, res) {
         const { idmau, status } = req.body;
