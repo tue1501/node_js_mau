@@ -2,7 +2,6 @@ import connection from '../config/database.js'
 import jwt from 'jsonwebtoken';
 const orderbyid = async (req, res) => {
     const id = req.user.id;
-    const baseURL = "http://localhost:8080";
 
     try {
         // Lấy danh sách đơn hàng của khách hàng, bao gồm cả ghi chú
@@ -14,20 +13,36 @@ const orderbyid = async (req, res) => {
         const orderDetails = [];
 
         for (const order of orders) {
-            // Lấy sản phẩm trong đơn hàng và thông tin ghi chú từ bảng donhang
+            // Lấy sản phẩm trong đơn hàng, đổi idSanPham thành idMau
             const [products] = await connection.execute(
-                `SELECT p.*, c.sl, CONCAT(?, p.hinhanh) AS hinhanh 
-                 FROM chitietdonhang c 
-                 LEFT JOIN sanpham p ON c.idSanPham = p.idSanPham  
-                 WHERE c.idDonhang = ?`,
-                [baseURL, order.iddonhang]
+                `SELECT 
+                    p.idSanPham,
+                    c.idMau,
+                    c.sl,
+                    p.tensp,
+                    p.gia,
+                    p.xuatxu,
+                    p.tonkho,
+                    p.mota,
+                    -- Lấy ảnh từ bảng màu, nếu không có thì lấy ảnh từ bảng sản phẩm
+                    COALESCE(mh.hinhanh, p.hinhanh) AS hinhanh
+                FROM chitietdonhang c
+                LEFT JOIN sanpham_mau_hinhanh mh ON c.idMau = mh.id
+                LEFT JOIN sanpham p ON mh.idSanPham = p.idSanPham
+                WHERE c.idDonhang = ?`,
+                [order.iddonhang]
             );
 
-            // Thêm vào mảng kết quả 
+            // Cập nhật đường dẫn hình ảnh đầy đủ
+            const updatedProducts = products.map(product => ({
+                ...product,
+                hinhanh: product.hinhanh 
+            }));
+            // Thêm vào mảng kết quả
             orderDetails.push({
                 iddonhang: order.iddonhang,
                 ghichu: order.ghichu, // Lấy ghi chú từ bảng donhang
-                products: products
+                products: updatedProducts
             });
         }
 
@@ -40,6 +55,7 @@ const orderbyid = async (req, res) => {
         });
     }
 };
+
 
 const deleteorder = async (req, res) => {
     const id = req.user.id; 

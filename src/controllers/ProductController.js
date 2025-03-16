@@ -294,13 +294,15 @@ cloudinary.config({
   api_secret: process.env.CLOUD_API_SECRET,
 });
 
+
 const addProduct = async (req, res) => {
     try {
+        // Kiểm tra ảnh gốc có tồn tại không
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ message: "Cần ít nhất một ảnh!" });
         }
 
-        const { idChiTietLoaiSanPham, tensp, xuatxu, diemtb, gia, tonkho, mota } = req.body;
+        const { idChiTietLoaiSanPham, tensp, xuatxu, diemtb, gia, mota } = req.body;
 
         // Upload ảnh gốc (lấy ảnh đầu tiên)
         const mainImageUpload = await cloudinary.uploader.upload(req.files[0].path);
@@ -308,9 +310,9 @@ const addProduct = async (req, res) => {
 
         // Lưu sản phẩm vào bảng `sanpham`
         const [productResult] = await connection.execute(
-            `INSERT INTO sanpham (idChiTietLoaiSanPham, tensp, xuatxu, hinhanh, diemtb, gia, tonkho, mota) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [idChiTietLoaiSanPham, tensp, xuatxu, mainImageUrl, diemtb, gia, tonkho, mota]
+            `INSERT INTO sanpham (idChiTietLoaiSanPham, tensp, xuatxu, hinhanh, gia, mota) 
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [idChiTietLoaiSanPham, tensp, xuatxu, mainImageUrl, gia, mota] // Ban đầu tồn kho = 0
         );
 
         const productId = productResult.insertId;
@@ -318,22 +320,45 @@ const addProduct = async (req, res) => {
         let colorImagesData = []; // Lưu danh sách ảnh màu sắc
 
         // Nhận danh sách các màu sắc từ form-data
-        const colors = req.body.colors; // Đây là mảng các giá trị màu sắc (có thể null)
+        const colors = req.body.colors ? JSON.parse(req.body.colors) : []; // Phải là mảng JSON
+        const stocks = req.body.tonkho ? JSON.parse(req.body.tonkho) : []; // Phải là mảng JSON
 
-        // Duyệt qua các ảnh còn lại và lưu vào bảng sanpham_mau_hinhanh
-        const otherImages = req.files.slice(1); // Bỏ qua ảnh đầu tiên (ảnh gốc)
+        // Kiểm tra nếu số lượng màu sắc và tồn kho không khớp
+        if (colors.length !== stocks.length) {
+            return res.status(400).json({
+                message: "Số lượng màu sắc phải khớp với số lượng tồn kho!"
+            });
+        }
 
+        // Kiểm tra nếu tồn kho không phải là số (kiểm tra số liệu, không phải chuỗi)
+        for (let i = 0; i < stocks.length; i++) {
+            if (isNaN(stocks[i])) {
+                return res.status(400).json({
+                    message: `Tồn kho của màu ${colors[i]} phải là một số hợp lệ!`
+                });
+            }
+        }
+
+        const otherImages = req.files.slice(1); // Bỏ qua ảnh gốc (ảnh đầu tiên)
+
+        // Kiểm tra nếu có màu sắc
         if (colors && colors.length > 0) {
-            // Nếu số lượng ảnh ít hơn số lượng màu, thì gán null cho những màu không có ảnh
+            // Nếu có màu sắc, lưu từng màu và tồn kho
             for (let i = 0; i < colors.length; i++) {
-                const tenmau = colors[i]; // Tên màu
+                const color = colors[i]; // Lấy màu sắc
+                const stock = parseInt(stocks[i], 10); // Lấy tồn kho tương ứng với màu sắc và chuyển thành số
                 let img = null;
 
-                // Nếu có ảnh cho màu này
+                // Kiểm tra nếu có ảnh cho màu sắc này
                 if (i < otherImages.length) {
                     img = otherImages[i]; // Lấy ảnh theo index
-                } else {
-                    img = null; // Không có ảnh cho màu này
+                }
+
+                // Nếu không có ảnh cho màu sắc này, trả lỗi
+                if (!img) {
+                    return res.status(400).json({
+                        message: `Sản phẩm màu ${color} phải có ảnh tương ứng!`
+                    });
                 }
 
                 let imageUrl = null;
@@ -343,36 +368,19 @@ const addProduct = async (req, res) => {
                     imageUrl = uploadResult.secure_url;
                 }
 
-                // Lưu vào bảng `sanpham_mau_hinhanh`
+                // Lưu màu và ảnh màu vào bảng sanpham_mau_hinhanh
                 await connection.execute(
-                    `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh) VALUES (?, ?, ?)`,
-                    [productId, tenmau || null, imageUrl]
-                );
-
-                colorImagesData.push({ tenmau: tenmau || null, hinhanh: imageUrl });
+                    `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, ?, ?, ?)`,
+                    [productId, color || null, imageUrl || null, stock || null] // Lưu tồn kho cho mỗi màu, nếu không có thì là null
+                );                
+                colorImagesData.push({ tenmau: color || null, hinhanh: imageUrl || null, tonkho: stock || null });
             }
         } else {
-            // Nếu không có màu sắc và không có ảnh khác
-            if (otherImages.length === 0) {
-                await connection.execute(
-                    `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh) VALUES (?, NULL, NULL)`,
-                    [productId]
-                );
-                colorImagesData.push({ tenmau: null, hinhanh: null });
-            } else {
-                // Nếu có ảnh nhưng không có màu sắc
-                for (const img of otherImages) {
-                    const uploadResult = await cloudinary.uploader.upload(img.path);
-                    const imageUrl = uploadResult.secure_url;
-
-                    await connection.execute(
-                        `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh) VALUES (?, NULL, ?)`,
-                        [productId, imageUrl]
-                    );
-
-                    colorImagesData.push({ tenmau: null, hinhanh: imageUrl });
-                }
-            }
+            const { sl } = req.body;
+            await connection.execute(
+                `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, ?, ?, ?)`,
+                [productId, null, null, sl] // Lưu màu và tồn kho null
+            );
         }
 
         return res.status(201).json({
@@ -384,7 +392,6 @@ const addProduct = async (req, res) => {
                 hinhanh: mainImageUrl, // Hình ảnh gốc sản phẩm
                 diemtb,
                 gia,
-                tonkho,
                 mota,
                 colors: colorImagesData, // Danh sách màu & ảnh màu
             }
@@ -398,96 +405,150 @@ const addProduct = async (req, res) => {
 
 
 
+
 const updateProduct = async (req, res) => {
     try {
-        const { id } = req.params;
-        const {
-            idChiTietLoaiSanPham,
-            tensp,
-            mausac,
-            xuatxu,
-            diemtb,
-            gia,
-            tonkho,
-            mota
-        } = req.body;
+        const { idSanPham } = req.params;
+        const { idChiTietLoaiSanPham, tensp, xuatxu, gia, mota } = req.body;
 
-        if (!tensp || !gia || !tonkho) {
-            return res.status(400).json({
-                message: 'Tên sản phẩm, giá và số lượng tồn kho là bắt buộc!',
-            });
+        // Kiểm tra ảnh gốc có tồn tại không
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ message: "Cần ít nhất một ảnh!" });
         }
 
-        // Lấy thông tin ảnh cũ từ DB
-        const [oldProduct] = await connection.execute(
-            `SELECT hinhanh FROM sanpham WHERE idSanPham = ?`,
-            [id]
-        );
+        // Upload ảnh gốc (lấy ảnh đầu tiên)
+        const mainImageUpload = await cloudinary.uploader.upload(req.files[0].path);
+        const mainImageUrl = mainImageUpload.secure_url;
 
-        if (oldProduct.length === 0) {
-            return res.status(404).json({ message: 'Không tìm thấy sản phẩm!' });
-        }
-
-        let oldImage = oldProduct[0].hinhanh;
-        let newImage = req.file ? `/uploads/${req.file.filename}` : oldImage;
-
-        // Nếu có ảnh mới -> Xóa ảnh cũ
-        if (req.file && oldImage) {
-            const imagePath = path.join(__dirname, "..", oldImage);
-            if (fs.existsSync(imagePath)) {
-                fs.unlinkSync(imagePath); // Xóa file ảnh cũ
-            }
-        }
-
-        // Cập nhật sản phẩm
-        const [result] = await connection.execute(
-            `
-            UPDATE sanpham
-            SET idChiTietLoaiSanPham = ?, tensp = ?, mausac = ?, xuatxu = ?, 
-                diemtb = ?, gia = ?, tonkho = ?, mota = ?, hinhanh = ?
-            WHERE idSanPham = ?
-            `,
+        // Cập nhật sản phẩm vào bảng `sanpham`
+        const [productResult] = await connection.execute(
+            `UPDATE sanpham SET idChiTietLoaiSanPham = ?, tensp = ?, xuatxu = ?, hinhanh = ?, gia = ?, mota = ? 
+            WHERE idSanPham = ?`,
             [
-                idChiTietLoaiSanPham,
-                tensp,
-                mausac,
-                xuatxu,
-                diemtb,
-                gia,
-                tonkho,
-                mota,
-                newImage,
-                id
+                idChiTietLoaiSanPham || null,
+                tensp || null,
+                xuatxu || null,
+                mainImageUrl || null,
+                gia || null,
+                mota || null,
+                idSanPham
             ]
         );
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'Không tìm thấy sản phẩm!' });
+        if (productResult.affectedRows === 0) {
+            return res.status(404).json({ message: "Sản phẩm không tồn tại!" });
         }
 
-        return res.json({
-            message: 'Sản phẩm đã được cập nhật thành công!',
-            data: {
-                idSanPham: id,
-                idChiTietLoaiSanPham,
+        let colorImagesData = []; // Lưu danh sách ảnh màu sắc
+
+        // Nhận danh sách các màu sắc từ form-data
+        const colors = req.body.colors ? JSON.parse(req.body.colors) : []; // Phải là mảng JSON
+        const stocks = req.body.tonkho ? JSON.parse(req.body.tonkho) : []; // Phải là mảng JSON
+
+        // Kiểm tra nếu số lượng màu sắc và tồn kho không khớp
+        if (colors.length !== stocks.length) {
+            return res.status(400).json({
+                message: "Số lượng màu sắc phải khớp với số lượng tồn kho!"
+            });
+        }
+
+        // Kiểm tra nếu tồn kho không phải là số (kiểm tra số liệu, không phải chuỗi)
+        for (let i = 0; i < stocks.length; i++) {
+            if (isNaN(stocks[i])) {
+                return res.status(400).json({
+                    message: `Tồn kho của màu ${colors[i]} phải là một số hợp lệ!`
+                });
+            }
+        }
+
+        const otherImages = req.files.slice(1); // Bỏ qua ảnh gốc (ảnh đầu tiên)
+
+        // Nếu mảng colors có màu sắc, xóa dữ liệu cũ và thêm mới
+        if (colors && colors.length > 0) {
+            // Xóa màu sắc cũ trước khi thêm mới
+            await connection.execute(
+                `DELETE FROM sanpham_mau_hinhanh WHERE idSanPham = ?`,
+                [idSanPham]
+            );
+
+            // Nếu có màu sắc, lưu từng màu và tồn kho
+            for (let i = 0; i < colors.length; i++) {
+                const color = colors[i]; // Lấy màu sắc
+                const stock = parseInt(stocks[i], 10); // Lấy tồn kho tương ứng với màu sắc và chuyển thành số
+                let img = null;
+
+                // Kiểm tra nếu có ảnh cho màu sắc này
+                if (i < otherImages.length) {
+                    img = otherImages[i]; // Lấy ảnh theo index
+                }
+
+                // Nếu không có ảnh cho màu sắc này, trả lỗi
+                if (!img) {
+                    return res.status(400).json({
+                        message: `Sản phẩm màu ${color} phải có ảnh tương ứng!`
+                    });
+                }
+
+                let imageUrl = null;
+                if (img) {
+                    // Upload ảnh lên Cloudinary nếu có ảnh
+                    const uploadResult = await cloudinary.uploader.upload(img.path);
+                    imageUrl = uploadResult.secure_url;
+                }
+
+                // Lưu màu và ảnh màu vào bảng sanpham_mau_hinhanh
+                await connection.execute(
+                    `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, ?, ?, ?)`,
+                    [
+                        idSanPham,
+                        color || null, // Thay thế undefined bằng null
+                        imageUrl || null, // Thay thế undefined bằng null
+                        stock || 0 // Thay thế undefined bằng null
+                    ]
+                );
+                colorImagesData.push({ tenmau: color || null, hinhanh: imageUrl || null, tonkho: stock || null });
+            }
+        } else {
+            // Nếu mảng colors rỗng, xóa tất cả màu sắc cũ và chỉ thêm tồn kho mới
+            await connection.execute(
+                `DELETE FROM sanpham_mau_hinhanh WHERE idSanPham = ?`,
+                [idSanPham]
+            );
+
+            // Lấy số lượng tồn kho và thêm lại tồn kho (sl) cho sản phẩm
+            const { sl } = req.body;
+            await connection.execute(
+                `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, ?, ?, ?)`,
+                [
+                    idSanPham,
+                    null, // Thay vì undefined, truyền null
+                    null, // Thay vì undefined, truyền null
+                    sl || 0 // Thay vì undefined, truyền null
+                ]
+            );
+        }
+
+        return res.status(200).json({
+            message: "Sản phẩm đã được cập nhật thành công!",
+            product: {
+                idSanPham,
                 tensp,
-                mausac,
                 xuatxu,
-                diemtb,
+                hinhanh: mainImageUrl, // Hình ảnh gốc sản phẩm
                 gia,
-                tonkho,
                 mota,
-                hinhanh: newImage
-            },
+                colors: colorImagesData, // Danh sách màu & ảnh màu
+            }
         });
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({
-            message: 'Lỗi khi cập nhật sản phẩm!',
-            error: err,
-        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Lỗi server" });
     }
 };
+
+
+
 
 
 const producttypedetails = async (req, res) => {

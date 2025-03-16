@@ -40,7 +40,7 @@ const initAPiRouter = (app) => {
 
     router.put('/updateProductTypeDetail/:id', authenticateJWT,ProductController.updateProductTypeDetail);
 
-    router.put('/updateProduct/:id', upload.single('hinhanh'), ProductController.updateProduct);
+    router.put('/updateProduct/:idSanPham', uploadMultiple, ProductController.updateProduct);
 
     router.post('/search', ProductController.search);
 
