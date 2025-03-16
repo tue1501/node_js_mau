@@ -45,7 +45,7 @@ const sendSms = async (req, res) => {
   
       // Kiểm tra nếu không có dữ liệu trả về từ query
       if (rows.length === 0) {
-        return res.status(404).json({ success: false, message: 'User not found!' });
+        return res.status(404).json({ success: false, message: 'Số điện thoại không tồn tạitại' });
       }
   
       // Định dạng số điện thoại với mã quốc gia +1 nếu cần
