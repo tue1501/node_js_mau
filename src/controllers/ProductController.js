@@ -318,15 +318,10 @@ const addProduct = async (req, res) => {
         let colorImagesData = []; // Lưu danh sách ảnh màu sắc
 
         // Nhận danh sách các màu sắc từ form-data
-        const colors = req.body.colors; // Đây là mảng các giá trị màu sắc
+        const colors = req.body.colors; // Đây là mảng các giá trị màu sắc (có thể null)
 
         // Duyệt qua các ảnh còn lại và lưu vào bảng sanpham_mau_hinhanh
         const otherImages = req.files.slice(1); // Bỏ qua ảnh đầu tiên (ảnh gốc)
-
-        // Kiểm tra xem số lượng ảnh có ít hơn số lượng màu sắc không
-        if (colors && colors.length > otherImages.length) {
-            return res.status(400).json({ message: "Số lượng ảnh không đủ cho các màu sắc. Vui lòng tải thêm ảnh." });
-        }
 
         if (colors && colors.length > 0) {
             // Nếu số lượng ảnh ít hơn số lượng màu, thì gán null cho những màu không có ảnh
@@ -338,12 +333,15 @@ const addProduct = async (req, res) => {
                 if (i < otherImages.length) {
                     img = otherImages[i]; // Lấy ảnh theo index
                 } else {
-                    img = { originalname: `no-color-image.jpg`, path: otherImages[0].path }; // Nếu thiếu ảnh, dùng ảnh đầu tiên làm ảnh "null"
+                    img = null; // Không có ảnh cho màu này
                 }
 
-                // Lưu ảnh vào Cloudinary
-                const uploadResult = await cloudinary.uploader.upload(img.path);
-                const imageUrl = uploadResult.secure_url;
+                let imageUrl = null;
+                if (img) {
+                    // Upload ảnh lên Cloudinary nếu có ảnh
+                    const uploadResult = await cloudinary.uploader.upload(img.path);
+                    imageUrl = uploadResult.secure_url;
+                }
 
                 // Lưu vào bảng `sanpham_mau_hinhanh`
                 await connection.execute(
@@ -354,18 +352,26 @@ const addProduct = async (req, res) => {
                 colorImagesData.push({ tenmau: tenmau || null, hinhanh: imageUrl });
             }
         } else {
-            // Nếu không có màu sắc, duyệt tất cả các ảnh còn lại và gán tenmau là null
-            for (const img of otherImages) {
-                const uploadResult = await cloudinary.uploader.upload(img.path);
-                const imageUrl = uploadResult.secure_url;
-
+            // Nếu không có màu sắc và không có ảnh khác
+            if (otherImages.length === 0) {
                 await connection.execute(
-                    `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh) VALUES (?, ?, ?)`,
-
-                    [productId, null, imageUrl]
+                    `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh) VALUES (?, NULL, NULL)`,
+                    [productId]
                 );
+                colorImagesData.push({ tenmau: null, hinhanh: null });
+            } else {
+                // Nếu có ảnh nhưng không có màu sắc
+                for (const img of otherImages) {
+                    const uploadResult = await cloudinary.uploader.upload(img.path);
+                    const imageUrl = uploadResult.secure_url;
 
-                colorImagesData.push({ tenmau: null, hinhanh: imageUrl });
+                    await connection.execute(
+                        `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh) VALUES (?, NULL, ?)`,
+                        [productId, imageUrl]
+                    );
+
+                    colorImagesData.push({ tenmau: null, hinhanh: imageUrl });
+                }
             }
         }
 
@@ -389,6 +395,7 @@ const addProduct = async (req, res) => {
         res.status(500).json({ message: "Lỗi server" });
     }
 };
+
 
 
 const updateProduct = async (req, res) => {

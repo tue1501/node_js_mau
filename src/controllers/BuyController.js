@@ -64,11 +64,11 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
 
 // Hàm Pay để xử lý đơn hàng và phương thức thanh toán
 const Pay = async (req, res) => {
-    const { idMauHinhAnh, note, iddiscount, quantity, paymentMethod } = req.body;
+    const { idMau, note, iddiscount, quantity, paymentMethod } = req.body;
     const idkhachhang = req.user.id; // Lấy ID từ token đã giải mã
 
     try {
-        if (!Array.isArray(idMauHinhAnh) || idMauHinhAnh.length === 0 || !Array.isArray(quantity) || quantity.length !== idMauHinhAnh.length) {
+        if (!Array.isArray(idMau) || idMau.length === 0 || !Array.isArray(quantity) || quantity.length !== idMau.length) {
             return res.status(400).json({ message: 'Invalid product color-image IDs or quantities provided' });
         }
 
@@ -98,20 +98,20 @@ const Pay = async (req, res) => {
             }
         }
 
-        // Lấy thông tin sản phẩm dựa trên `idMauHinhAnh`
-        const placeholders = idMauHinhAnh.map(() => '?').join(',');
+        // Lấy thông tin sản phẩm dựa trên `idMau`
+        const placeholders = idMau.map(() => '?').join(',');
         const [products] = await connection.execute(
-            `SELECT smh.idSanPham, smh.idMauHinhAnh, s.tensp, s.gia, smh.hinhanh, smh.tenmau
+            `SELECT smh.idSanPham, smh.id as idMau, s.tensp, s.gia, smh.hinhanh, smh.tenmau
              FROM sanpham_mau_hinhanh smh
              JOIN sanpham s ON smh.idSanPham = s.idSanPham
-             WHERE smh.idMauHinhAnh IN (${placeholders})`,
-            idMauHinhAnh
+             WHERE smh.id IN (${placeholders})`,
+            idMau
         );
 
         let total = 0;
         for (let i = 0; i < products.length; i++) {
             const product = products[i];
-            const productQuantity = quantity[idMauHinhAnh.indexOf(product.idMauHinhAnh)] || 1;
+            const productQuantity = quantity[idMau.indexOf(product.idMau)] || 1;
             total += product.gia * productQuantity;
         }
 
@@ -161,10 +161,10 @@ const Pay = async (req, res) => {
         const orderId = orderResult.insertId;
 
         // Lưu thông tin chi tiết đơn hàng
-        const detailsPromises = idMauHinhAnh.map((colorImageId, index) => {
+        const detailsPromises = idMau.map((colorImageId, index) => {
             const productQuantity = quantity[index];
             return connection.query(
-                'INSERT INTO chitietdonhang (idMauHinhAnh, idDonhang, sl, iddanhgia) VALUES (?, ?, ?, null)',
+                'INSERT INTO chitietdonhang (idMau, idDonhang, sl, iddanhgia) VALUES (?, ?, ?, null)',
                 [colorImageId, orderId, productQuantity]
             );
         });
@@ -179,9 +179,9 @@ const Pay = async (req, res) => {
         }
 
         const [orderDetails] = await connection.execute(
-            `SELECT c.idMauHinhAnh, s.tensp, smh.tenmau, c.sl, s.gia, smh.hinhanh
+            `SELECT c.idMau, s.tensp, smh.tenmau, c.sl, s.gia, smh.hinhanh
              FROM chitietdonhang c
-             JOIN sanpham_mau_hinhanh smh ON c.idMauHinhAnh = smh.idMauHinhAnh
+             JOIN sanpham_mau_hinhanh smh ON c.idMau = smh.id
              JOIN sanpham s ON smh.idSanPham = s.idSanPham
              WHERE c.idDonhang = ?`,
             [orderId]
