@@ -10,28 +10,32 @@ const getEvaluate = async (req, res) => {
             return res.status(400).json({ message: "Thiếu ID sản phẩm" });
         }
 
-        // Truy vấn lấy đánh giá, kết hợp bảng khách hàng và quản trị viên
+        // Truy vấn lấy đánh giá của tất cả màu thuộc sản phẩm
         const [rows] = await connection.execute(
             `SELECT 
                 d.id, 
-                d.idSanPham, 
+                d.idMau, 
                 d.noidung, 
                 d.traloi, 
                 d.diem, 
                 d.ngaydanhgia, 
                 d.ngaytraloi, 
                 k.hoten AS hoten, 
-                q.hoten AS hotenqtv
+                q.hoten AS hotenqtv, 
+                m.tenMau, 
+                s.tenSP AS tensp
             FROM danhgia d
             JOIN khachhang k ON d.idKhachHang = k.idKhachHang
             LEFT JOIN qtv q ON d.idQtv = q.idQtv
-            WHERE d.idSanPham = ?`,
+            JOIN sanpham_mau_hinhanh m ON d.idMau = m.id
+            JOIN sanpham s ON m.idSanPham = s.idSanPham  
+            WHERE d.idMau IN (SELECT id FROM sanpham_mau_hinhanh WHERE idSanPham = ?);
+            `,
             [idSanPham]
-        );
-
+        );        
         // Nếu không có đánh giá nào
         if (rows.length === 0) {
-            return res.status(404).json({ message: "Không tìm thấy đánh giá nào cho sản phẩm này" });
+            return res.status(404).json({ message: "Không có đánh giá nào" });
         }
 
         // Trả về kết quả
@@ -41,35 +45,47 @@ const getEvaluate = async (req, res) => {
         res.status(500).json({ message: "Lỗi server" });
     }
 };
-
 const addEvaluate = async (req, res) => {
     try {
         const idKhachHang = req.user.id;
-        const {noidung, diem,idSanPham,idDonHang} = req.body;
-
-        // Kiểm tra dữ liệu đầu vào
-        if (!idSanPham || !idKhachHang || !noidung || diem === undefined) {
+        const { idmau, iddonhang } = req.body;
+        let { noidung, diem } = req.body;
+        // Kiểm tra idMau và idKhachHang (bắt buộc)
+        if (!idmau || !idKhachHang || !iddonhang) {
             return res.status(400).json({ message: "Thiếu dữ liệu cần thiết" });
         }
+
+        // Đảm bảo noidung không null, nếu không có thì để chuỗi rỗng
+        if (noidung === undefined || noidung === null) {
+            noidung = "";
+        }
+
+        // Đảm bảo diem không null, nếu không có thì để 0
+        if (diem === undefined || diem === null) {
+            diem = 0;
+        }
+        // Kiểm tra xem đơn hàng này đã được đánh giá chưa
         const [orderDetails] = await connection.execute(
-            `SELECT idDanhGia FROM chitietdonhang WHERE idDonHang = ? AND idSanPham = ?`,
-            [idDonHang, idSanPham]
+            `SELECT idDanhGia FROM chitietdonhang WHERE idDonHang = ? AND idMau = ?`,
+            [iddonhang, idmau]
         );
         if (orderDetails.length > 0 && orderDetails[0].idDanhGia !== null) {
             return res.status(400).json({ message: "Bạn đã đánh giá đơn hàng này rồi" });
         }
+
         // Thêm đánh giá vào cơ sở dữ liệu
         const [result] = await connection.execute(
-            `INSERT INTO danhgia (idSanPham, idKhachHang, noidung, diem, ngaydanhgia) 
+            `INSERT INTO danhgia (idMau, idKhachHang, noidung, diem, ngaydanhgia) 
             VALUES (?, ?, ?, ?, NOW())`,
-            [idSanPham, idKhachHang, noidung, diem]
+            [idmau, idKhachHang, noidung, diem]
         );
+
         if (result.affectedRows === 1) {
             const newIdDanhGia = result.insertId;
             // Cập nhật idDanhGia trong bảng chitietdonhang
             await connection.execute(
-                `UPDATE chitietdonhang SET idDanhGia = ? WHERE idDonHang = ? AND idSanPham = ?`,
-                [newIdDanhGia, idDonHang, idSanPham]
+                `UPDATE chitietdonhang SET idDanhGia = ? WHERE idDonHang = ? AND idMau = ?`,
+                [newIdDanhGia, iddonhang, idmau]
             );
             return res.status(201).json({ message: "Thêm đánh giá thành công" });
         } else {
@@ -80,6 +96,7 @@ const addEvaluate = async (req, res) => {
         res.status(500).json({ message: "Lỗi server" });
     }
 };
+
 
 export default {
     getEvaluate,addEvaluate
