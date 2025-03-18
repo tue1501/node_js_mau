@@ -49,7 +49,7 @@ const updateUser = async (req, res) => {
 
     try {
         const [result] = await connection.execute(
-            `UPDATE khachhang SET hoten = ?, sdt = ?, email = ?, diachi = ? WHERE idKhachHang = ?`,
+            `UPDATE khachhang SET hoten = ?, sdt = ?, gmail = ?, diachi = ? WHERE idKhachHang = ?`,
             [hoten, sdt, email, diachi, id]
         );
 

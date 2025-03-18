@@ -306,14 +306,6 @@ const addProduct = async (req, res) => {
         const mainImageUpload = await cloudinary.uploader.upload(req.files[0].path);
         const mainImageUrl = mainImageUpload.secure_url;
 
-        // Lưu sản phẩm vào bảng `sanpham`
-        const [productResult] = await connection.execute(
-            `INSERT INTO sanpham (idChiTietLoaiSanPham, tensp, xuatxu, hinhanh, gia, mota) 
-            VALUES (?, ?, ?, ?, ?, ?)`,
-            [idChiTietLoaiSanPham, tensp, xuatxu, mainImageUrl, gia, mota]
-        );
-
-        const productId = productResult.insertId;
         let colorImagesData = [];
         const colors = req.body.colors ? JSON.parse(req.body.colors) : [];
         const stocks = req.body.tonkho ? JSON.parse(req.body.tonkho) : [];
@@ -323,7 +315,14 @@ const addProduct = async (req, res) => {
         const otherImages = req.files.slice(1); // Ảnh khác ngoài ảnh chính
 
         if (colors.length === 0) {
+            const [productResult] = await connection.execute(
+                `INSERT INTO sanpham (idChiTietLoaiSanPham, tensp, xuatxu, hinhanh, gia, mota) 
+                VALUES (?, ?, ?, ?, ?, ?)`,
+                [idChiTietLoaiSanPham, tensp, xuatxu, mainImageUrl, gia, mota]
+            );
+            const productId = productResult.insertId;
             if (req.files.length === 1) {
+                // Lưu sản phẩm vào bảng `sanpham`
                 // Nếu chỉ có một ảnh, lưu bản ghi với màu null, ảnh null, và số lượng tồn kho
                 await connection.execute(
                     `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, NULL, NULL, ?)`,
@@ -355,7 +354,13 @@ const addProduct = async (req, res) => {
             if (otherImages.length < colors.length) {
                 return res.status(400).json({ message: "Mỗi màu sắc phải có ít nhất một ảnh!" });
             }
-
+            // Lưu sản phẩm vào bảng `sanpham`
+            const [productResult] = await connection.execute(
+                `INSERT INTO sanpham (idChiTietLoaiSanPham, tensp, xuatxu, hinhanh, gia, mota) 
+                VALUES (?, ?, ?, ?, ?, ?)`,
+                [idChiTietLoaiSanPham, tensp, xuatxu, mainImageUrl, gia, mota]
+            );
+            const productId = productResult.insertId;
             // Lưu màu sắc, ảnh và tồn kho cho từng màu
             for (let i = 0; i < colors.length; i++) {
                 const color = colors[i];
