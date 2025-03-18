@@ -154,8 +154,67 @@ const getAllOrders = async (req, res) => {
     }
 };
 
+const getOrderById = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // Lấy thông tin đơn hàng theo ID
+        const [orders] = await connection.execute(
+            `SELECT iddonhang, idKhachHang, ghichu FROM donhang WHERE iddonhang = ?`,
+            [id]
+        );
+
+        if (orders.length === 0) {
+            return res.status(404).json({ message: 'Order not found!' });
+        }
+
+        const order = orders[0];
+
+        // Lấy sản phẩm trong đơn hàng, đổi idSanPham thành idMau
+        const [products] = await connection.execute(
+            `SELECT 
+                p.idSanPham,
+                c.idMau,
+                c.sl,
+                p.tensp,
+                p.gia,
+                p.xuatxu,
+                p.tonkho,
+                p.mota,
+                -- Lấy ảnh từ bảng màu, nếu không có thì lấy ảnh từ bảng sản phẩm
+                COALESCE(mh.hinhanh, p.hinhanh) AS hinhanh
+            FROM chitietdonhang c
+            LEFT JOIN sanpham_mau_hinhanh mh ON c.idMau = mh.id
+            LEFT JOIN sanpham p ON mh.idSanPham = p.idSanPham
+            WHERE c.idDonhang = ?`,
+            [order.iddonhang]
+        );
+
+        // Cập nhật đường dẫn hình ảnh đầy đủ
+        const updatedProducts = products.map(product => ({
+            ...product,
+            hinhanh: product.hinhanh 
+        }));
+
+        // Trả về thông tin đơn hàng và sản phẩm
+        return res.status(200).json({
+            iddonhang: order.iddonhang,
+            idKhachHang: order.idKhachHang,
+            ghichu: order.ghichu,
+            products: updatedProducts
+        });
+    } catch (err) {
+        console.error(err);
+        return res.json({
+            message: 'Error fetching order by ID',
+            error: err,
+        });
+    }
+};
+
 export default {
     orderbyid,
     deleteorder,
-    getAllOrders
+    getAllOrders,
+    getOrderById
 };

@@ -11,6 +11,9 @@ const OrderRoutes = (app) => {
     // Route to get all orders
     router.get('/ordersall', OrderController.getAllOrders);
 
+    // Route to get order details by order ID
+    router.get('/orders/:id', OrderController.getOrderById);
+
     return app.use('/api', router);
 }
 export default OrderRoutes;
