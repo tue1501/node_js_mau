@@ -336,9 +336,9 @@ const addProduct = async (req, res) => {
                     const imageUrl = uploadResult.secure_url;
                     await connection.execute(
                         `INSERT INTO sanpham_mau_hinhanh (idSanPham, hinhanh,so_luong) VALUES (?, ?, ?)`,
-                        [productId, imageUrl, stocks[0]|| 0 ]   
+                        [productId, imageUrl, sl ]   
                     );
-                    stocks[0] === 0;
+                    sl === 0;
                 }
             }
         } else {
