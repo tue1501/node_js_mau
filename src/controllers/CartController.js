@@ -66,9 +66,13 @@ const CartController = {
             const id = req.user.id;
             // Lấy các sản phẩm trong giỏ hàng của người dùng theo idMau
             const [cartItems] = await connection.query(
-                `SELECT c.idgiohanghang , c.idMau, c.sl, 
+                `SELECT c.idgiohang , c.idMau, c.sl, 
                         sp.tensp, sp.xuatxu, sp.diemtb, sp.gia, sp.tonkho, sp.mota, 
-                        m.tenmau, m.hinhanh 
+                        m.tenmau, 
+                        CASE 
+                            WHEN m.hinhanh IS NOT NULL THEN m.hinhanh 
+                            ELSE sp.hinhanh 
+                        END AS hinhanh 
                  FROM giohang c
                  INNER JOIN sanpham_mau_hinhanh m ON c.idMau = m.id
                  INNER JOIN sanpham sp ON m.idSanPham = sp.idSanPham
