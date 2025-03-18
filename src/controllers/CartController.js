@@ -66,7 +66,7 @@ const CartController = {
             const id = req.user.id;
             // Lấy các sản phẩm trong giỏ hàng của người dùng theo idMau
             const [cartItems] = await connection.query(
-                `SELECT c.idgiohang , c.idMau, c.sl, 
+                `SELECT c.idgiohanghang , c.idMau, c.sl, 
                         sp.tensp, sp.xuatxu, sp.diemtb, sp.gia, sp.tonkho, sp.mota, 
                         m.tenmau, 
                         CASE 
