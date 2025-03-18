@@ -355,10 +355,10 @@ const addProduct = async (req, res) => {
 
             await connection.execute(
                 `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, ?, ?, ?)`,
-                [productId, color || null, imageUrl || null, stock || null]
+                [productId, color || null, imageUrl || null, stock || 0]
             );
 
-            colorImagesData.push({ tenmau: color || null, hinhanh: imageUrl || null, tonkho: stock || null });
+            colorImagesData.push({ tenmau: color || null, hinhanh: imageUrl || null, tonkho: stock || 0});
         }
 
         return res.status(201).json({
