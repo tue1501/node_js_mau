@@ -343,8 +343,8 @@ const addProduct = async (req, res) => {
                     const uploadResult = await cloudinary.uploader.upload(img.path);
                     const imageUrl = uploadResult.secure_url;
                     await connection.execute(
-                        `INSERT INTO sanpham_mau_hinhanh (idSanPham, hinhanh) VALUES (?, ?)`,
-                        [productId, imageUrl]
+                        `INSERT INTO sanpham_mau_hinhanh (idSanPham, hinhanh,so_luong) VALUES (?, ?, ?)`,
+                        [productId, imageUrl, stocks[i]|| 0 ]   
                     );
                 }
             }
@@ -369,7 +369,7 @@ const addProduct = async (req, res) => {
                 
                 await connection.execute(
                     `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, ?, ?, ?)`,
-                    [productId, color, imageUrl, stock]
+                    [productId, color, imageUrl, stock|| 0]
                 );
                 
                 colorImagesData.push({ tenmau: color, hinhanh: imageUrl, tonkho: stock });
