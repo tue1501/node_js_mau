@@ -318,15 +318,7 @@ const addProduct = async (req, res) => {
         const colors = req.body.colors ? JSON.parse(req.body.colors) : [];
         const stocks = req.body.tonkho ? JSON.parse(req.body.tonkho) : [];
 
-        if (colors.length !== stocks.length) {
-            return res.status(400).json({ message: "Số lượng màu sắc phải khớp với số lượng tồn kho!" });
-        }
-
-        for (let i = 0; i < stocks.length; i++) {
-            if (isNaN(stocks[i])) {
-                return res.status(400).json({ message: `Tồn kho của màu ${colors[i]} phải là một số hợp lệ!` });
-            }
-        }
+        
 
         const otherImages = req.files.slice(1); // Ảnh khác ngoài ảnh chính
 
@@ -344,11 +336,20 @@ const addProduct = async (req, res) => {
                     const imageUrl = uploadResult.secure_url;
                     await connection.execute(
                         `INSERT INTO sanpham_mau_hinhanh (idSanPham, hinhanh,so_luong) VALUES (?, ?, ?)`,
-                        [productId, imageUrl, stocks[i]|| 0 ]   
+                        [productId, imageUrl, stocks[0]|| 0 ]   
                     );
                 }
             }
         } else {
+            if (colors.length !== stocks.length) {
+                return res.status(400).json({ message: "Số lượng màu sắc phải khớp với số lượng tồn kho!" });
+            }
+    
+            for (let i = 0; i < stocks.length; i++) {
+                if (isNaN(stocks[i])) {
+                    return res.status(400).json({ message: `Tồn kho của màu ${colors[i]} phải là một số hợp lệ!` });
+                }
+            }
             // Nếu có màu, kiểm tra số lượng ảnh có đủ cho từng màu không
             if (otherImages.length < colors.length) {
                 return res.status(400).json({ message: "Mỗi màu sắc phải có ít nhất một ảnh!" });
