@@ -1,0 +1,237 @@
+-- 1. loaisanpham
+CREATE TABLE `loaisanpham` (
+  `idLoaiSanPham` int NOT NULL AUTO_INCREMENT,
+  `tenloai` varchar(100) NOT NULL,
+  PRIMARY KEY (`idLoaiSanPham`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 2. chitietloaisanpham
+CREATE TABLE `chitietloaisanpham` (
+  `idChiTietLoaiSanPham` int NOT NULL AUTO_INCREMENT,
+  `tenchitiet` varchar(100) NOT NULL,
+  `idLoaiSanPham` int DEFAULT NULL,
+  PRIMARY KEY (`idChiTietLoaiSanPham`),
+  KEY `idLoaiSanPham` (`idLoaiSanPham`),
+  CONSTRAINT `chitietloaisanpham_ibfk_1` FOREIGN KEY (`idLoaiSanPham`) REFERENCES `loaisanpham` (`idLoaiSanPham`)
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 3. sanpham
+CREATE TABLE `sanpham` (
+  `idSanPham` int NOT NULL AUTO_INCREMENT,
+  `idChiTietLoaiSanPham` int DEFAULT NULL,
+  `tensp` varchar(100) DEFAULT NULL,
+  `mausac` varchar(50) DEFAULT NULL,
+  `xuatxu` varchar(50) DEFAULT NULL,
+  `hinhanh` varchar(255) DEFAULT NULL,
+  `diemtb` float DEFAULT NULL,
+  `gia` int DEFAULT NULL,
+  `tonkho` int DEFAULT NULL,
+  `mota` varchar(4000) DEFAULT NULL,
+  PRIMARY KEY (`idSanPham`),
+  KEY `idChiTietLoaiSanPham` (`idChiTietLoaiSanPham`),
+  CONSTRAINT `sanpham_ibfk_1` FOREIGN KEY (`idChiTietLoaiSanPham`) REFERENCES `chitietloaisanpham` (`idChiTietLoaiSanPham`)
+) ENGINE=InnoDB AUTO_INCREMENT=86 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 4. sanpham_mau_hinhanh
+CREATE TABLE `sanpham_mau_hinhanh` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `idSanPham` int DEFAULT NULL,
+  `tenmau` varchar(255) DEFAULT NULL,
+  `hinhanh` varchar(500) DEFAULT NULL,
+  `so_luong` int DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `idSanPham` (`idSanPham`),
+  CONSTRAINT `sanpham_mau_hinhanh_ibfk_1` FOREIGN KEY (`idSanPham`) REFERENCES `sanpham` (`idSanPham`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=58 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Trigger cho sanpham_mau_hinhanh
+DELIMITER ;;
+CREATE TRIGGER `update_tonkho_after_insert` AFTER INSERT ON `sanpham_mau_hinhanh` FOR EACH ROW BEGIN
+    UPDATE sanpham
+    SET tonkho = (
+        SELECT SUM(so_luong)
+        FROM sanpham_mau_hinhanh
+        WHERE idSanPham = NEW.idSanPham
+    )
+    WHERE idSanPham = NEW.idSanPham;
+END ;;
+DELIMITER ;
+
+DELIMITER ;;
+CREATE TRIGGER `update_tonkho_after_update` AFTER UPDATE ON `sanpham_mau_hinhanh` FOR EACH ROW BEGIN
+    UPDATE sanpham
+    SET tonkho = (
+        SELECT SUM(so_luong)
+        FROM sanpham_mau_hinhanh
+        WHERE idSanPham = NEW.idSanPham
+    )
+    WHERE idSanPham = NEW.idSanPham;
+END ;;
+DELIMITER ;
+
+DELIMITER ;;
+CREATE TRIGGER `update_tonkho_after_delete` AFTER DELETE ON `sanpham_mau_hinhanh` FOR EACH ROW BEGIN
+    UPDATE sanpham
+    SET tonkho = (
+        SELECT SUM(so_luong)
+        FROM sanpham_mau_hinhanh
+        WHERE idSanPham = OLD.idSanPham
+    )
+    WHERE idSanPham = OLD.idSanPham;
+END ;;
+DELIMITER ;
+
+-- 5. quyen
+CREATE TABLE `quyen` (
+  `idQuyen` int NOT NULL AUTO_INCREMENT,
+  `tenquyen` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`idQuyen`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 6. qtv
+CREATE TABLE `qtv` (
+  `idQtv` int NOT NULL AUTO_INCREMENT,
+  `hoten` varchar(100) DEFAULT NULL,
+  `ngaysinh` date DEFAULT NULL,
+  `gioitinh` tinyint(1) DEFAULT NULL,
+  `sdt` varchar(20) DEFAULT NULL,
+  `matkhau` varchar(100) DEFAULT NULL,
+  `cmnd` varchar(20) DEFAULT NULL,
+  `idQuyen` int DEFAULT NULL,
+  PRIMARY KEY (`idQtv`),
+  KEY `idQuyen` (`idQuyen`),
+  CONSTRAINT `qtv_ibfk_1` FOREIGN KEY (`idQuyen`) REFERENCES `quyen` (`idQuyen`)
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 7. khachhang
+CREATE TABLE `khachhang` (
+  `idKhachHang` int NOT NULL AUTO_INCREMENT,
+  `hoten` varchar(100) DEFAULT NULL,
+  `gmail` varchar(100) DEFAULT NULL,
+  `sdt` varchar(10) NOT NULL,
+  `matkhau` varchar(100) DEFAULT NULL,
+  `diachi` varchar(250) DEFAULT NULL,
+  PRIMARY KEY (`idKhachHang`),
+  UNIQUE KEY `sdt` (`sdt`)
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 8. giamgia
+CREATE TABLE `giamgia` (
+  `idGiamGia` int NOT NULL AUTO_INCREMENT,
+  `tengiamgia` varchar(100) DEFAULT NULL,
+  `ngaybatdau` date DEFAULT NULL,
+  `ngayketthuc` date DEFAULT NULL,
+  `mota` varchar(200) DEFAULT NULL,
+  `giamgia` int DEFAULT NULL,
+  `danggiamgia` varchar(50) DEFAULT NULL,
+  `giamin` int DEFAULT NULL,
+  `giamax` int DEFAULT NULL,
+  `soluong` int DEFAULT NULL,
+  PRIMARY KEY (`idGiamGia`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 9. donhang
+CREATE TABLE `donhang` (
+  `idDonhang` int NOT NULL AUTO_INCREMENT,
+  `idKhachHang` int DEFAULT NULL,
+  `tenkh` varchar(100) DEFAULT NULL,
+  `sdtkh` varchar(20) DEFAULT NULL,
+  `ngaytao` datetime DEFAULT NULL,
+  `ngaygiaohang` datetime DEFAULT NULL,
+  `ghichu` varchar(200) DEFAULT NULL,
+  `idGiamGia` int DEFAULT NULL,
+  `tt_cod` int DEFAULT NULL,
+  `noinhan` varchar(250) DEFAULT NULL,
+  `tt_online` int DEFAULT NULL,
+  `trangthai` int DEFAULT NULL,
+  `tongtien` float DEFAULT NULL,
+  PRIMARY KEY (`idDonhang`),
+  KEY `idKhachHang` (`idKhachHang`),
+  KEY `idGiamGia` (`idGiamGia`),
+  CONSTRAINT `donhang_ibfk_1` FOREIGN KEY (`idKhachHang`) REFERENCES `khachhang` (`idKhachHang`),
+  CONSTRAINT `donhang_ibfk_2` FOREIGN KEY (`idGiamGia`) REFERENCES `giamgia` (`idGiamGia`)
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 10. danhgia
+CREATE TABLE `danhgia` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `idQtv` int DEFAULT NULL,
+  `noidung` varchar(1000) DEFAULT NULL,
+  `traloi` varchar(1000) DEFAULT NULL,
+  `diem` float DEFAULT NULL,
+  `idKhachHang` int DEFAULT NULL,
+  `ngaydanhgia` datetime DEFAULT NULL,
+  `ngaytraloi` datetime DEFAULT NULL,
+  `idMau` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idQtv` (`idQtv`),
+  KEY `idKhachHang` (`idKhachHang`),
+  KEY `fk_danhgia_idMau` (`idMau`),
+  CONSTRAINT `danhgia_ibfk_2` FOREIGN KEY (`idQtv`) REFERENCES `qtv` (`idQtv`),
+  CONSTRAINT `danhgia_ibfk_3` FOREIGN KEY (`idKhachHang`) REFERENCES `khachhang` (`idKhachHang`),
+  CONSTRAINT `fk_danhgia_idMau` FOREIGN KEY (`idMau`) REFERENCES `sanpham_mau_hinhanh` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 11. chitietdonhang
+CREATE TABLE `chitietdonhang` (
+  `idChiTietDonHang` int NOT NULL AUTO_INCREMENT,
+  `idDonhang` int NOT NULL,
+  `sl` int NOT NULL,
+  `iddanhgia` int DEFAULT NULL,
+  `idMau` int NOT NULL,
+  PRIMARY KEY (`idChiTietDonHang`),
+  KEY `idDonhang` (`idDonhang`),
+  KEY `iddanhgia` (`iddanhgia`),
+  KEY `fk_chitietdonhang_idmau` (`idMau`),
+  CONSTRAINT `chitietdonhang_ibfk_2` FOREIGN KEY (`idDonhang`) REFERENCES `donhang` (`idDonhang`),
+  CONSTRAINT `chitietdonhang_ibfk_3` FOREIGN KEY (`iddanhgia`) REFERENCES `danhgia` (`id`),
+  CONSTRAINT `fk_chitietdonhang_idmau` FOREIGN KEY (`idMau`) REFERENCES `sanpham_mau_hinhanh` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 12. giohang
+CREATE TABLE `giohang` (
+  `idgiohanghang` int NOT NULL AUTO_INCREMENT,
+  `idkhachhang` int NOT NULL,
+  `sl` int DEFAULT NULL,
+  `idMau` int NOT NULL,
+  PRIMARY KEY (`idgiohanghang`),
+  KEY `idkhachhang` (`idkhachhang`),
+  KEY `fk_giohang_idmau` (`idMau`),
+  CONSTRAINT `fk_giohang_idmau` FOREIGN KEY (`idMau`) REFERENCES `sanpham_mau_hinhanh` (`id`),
+  CONSTRAINT `giohang_ibfk_2` FOREIGN KEY (`idkhachhang`) REFERENCES `khachhang` (`idKhachHang`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 13. chitietgiamgia
+CREATE TABLE `chitietgiamgia` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `idGiamGia` int DEFAULT NULL,
+  `idKhachHang` int DEFAULT NULL,
+  `trangthai` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idGiamGia` (`idGiamGia`),
+  KEY `idKhachHang` (`idKhachHang`),
+  CONSTRAINT `chitietgiamgia_ibfk_1` FOREIGN KEY (`idGiamGia`) REFERENCES `giamgia` (`idGiamGia`),
+  CONSTRAINT `chitietgiamgia_ibfk_2` FOREIGN KEY (`idKhachHang`) REFERENCES `khachhang` (`idKhachHang`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 14. codeootp
+CREATE TABLE `codeootp` (
+  `idOTP` int NOT NULL AUTO_INCREMENT,
+  `Sdt` varchar(10) NOT NULL,
+  `codeotp` varchar(6) DEFAULT NULL,
+  `ExpiryTime` datetime DEFAULT NULL,
+  `idKhachHang` int NOT NULL,
+  PRIMARY KEY (`idOTP`),
+  KEY `idKhachHang` (`idKhachHang`),
+  CONSTRAINT `codeootp_ibfk_1` FOREIGN KEY (`idKhachHang`) REFERENCES `khachhang` (`idKhachHang`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 15. cuahang1
+CREATE TABLE `cuahang1` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `sdt` varchar(10) DEFAULT NULL,
+  `diachi` varchar(200) DEFAULT NULL,
+  `email` varchar(50) DEFAULT NULL,
+  `facebook` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

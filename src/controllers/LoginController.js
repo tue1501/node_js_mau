@@ -1,8 +1,6 @@
-// controllers/UserController.js
 import jwt from 'jsonwebtoken';
 import connection from '../config/database.js'
 import connectDB from '../config/db.js'
-import User from '../models/user.js';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';

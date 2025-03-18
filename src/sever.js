@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url';
 import discount from './route/discount.js';
 import revenue from './route/revenue.js';
 import cors from 'cors';
-
+import User from './route/user.js';
 dotenv.config();
 
 const app = express(); 
@@ -85,7 +85,7 @@ app.use(cors({
 //   }
 // });
 
-
+User(app);
 revenue(app);
 initAPiRouter(app);  
 setupRoutes(app);
