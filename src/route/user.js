@@ -13,6 +13,9 @@ const User = (app) => {
     // Route to search users by phone number
     router.get('/users/search/phone', UserController.searchByPhone);
 
+    // Route to update user information
+    router.put('/users/:id', UserController.updateUser);
+
     return app.use('/api', router);
 }
 

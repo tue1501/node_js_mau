@@ -330,35 +330,43 @@ const addProduct = async (req, res) => {
 
         const otherImages = req.files.slice(1); // Ảnh khác ngoài ảnh chính
 
-        // Lưu tất cả ảnh vào bảng `sanpham_hinhanh`
-        for (let img of otherImages) {
-            const uploadResult = await cloudinary.uploader.upload(img.path);
-            const imageUrl = uploadResult.secure_url;
-
-            await connection.execute(
-                `INSERT INTO sanpham_mau_hinhanh (idSanPham, hinhanh) VALUES (?, ?)`,
-                [productId, imageUrl]
-            );
-        }
-
-        // Lưu màu sắc và ảnh cho từng màu
-        for (let i = 0; i < colors.length; i++) {
-            const color = colors[i];
-            const stock = parseInt(stocks[i], 10);
-            let img = otherImages[i] ? otherImages[i] : null;
-            let imageUrl = null;
-
-            if (img) {
+        if (colors.length === 0) {
+            // Nếu không có màu sắc, lưu tất cả ảnh khác vào bảng `sanpham_hinhanh`
+            for (let img of otherImages) {
                 const uploadResult = await cloudinary.uploader.upload(img.path);
-                imageUrl = uploadResult.secure_url;
+                const imageUrl = uploadResult.secure_url;
+                
+                await connection.execute(
+                    `INSERT INTO sanpham_hinhanh (idSanPham, hinhanh) VALUES (?, ?)`,
+                    [productId, imageUrl]
+                );
+            }
+        } else {
+            // Nếu có màu, kiểm tra số lượng ảnh có đủ cho từng màu không
+            if (otherImages.length < colors.length) {
+                return res.status(400).json({ message: "Mỗi màu sắc phải có ít nhất một ảnh!" });
             }
 
-            await connection.execute(
-                `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, ?, ?, ?)`,
-                [productId, color || null, imageUrl || null, stock || 0]
-            );
-
-            colorImagesData.push({ tenmau: color || null, hinhanh: imageUrl || null, tonkho: stock || 0});
+            // Lưu màu sắc, ảnh và tồn kho cho từng màu
+            for (let i = 0; i < colors.length; i++) {
+                const color = colors[i];
+                const stock = parseInt(stocks[i], 10);
+                let img = otherImages[i];
+                
+                if (!img) {
+                    return res.status(400).json({ message: `Màu ${color} thiếu ảnh!` });
+                }
+                
+                const uploadResult = await cloudinary.uploader.upload(img.path);
+                const imageUrl = uploadResult.secure_url;
+                
+                await connection.execute(
+                    `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, ?, ?, ?)`,
+                    [productId, color, imageUrl, stock]
+                );
+                
+                colorImagesData.push({ tenmau: color, hinhanh: imageUrl, tonkho: stock });
+            }
         }
 
         return res.status(201).json({
@@ -380,6 +388,7 @@ const addProduct = async (req, res) => {
         res.status(500).json({ message: "Lỗi server" });
     }
 };
+
 
 
 
