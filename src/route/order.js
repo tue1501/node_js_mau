@@ -8,6 +8,9 @@ const OrderRoutes = (app) => {
 
     router.post('/deleteorder',authenticateJWT, OrderController.deleteorder);
 
+    // Route to get all orders
+    router.get('/ordersall', OrderController.getAllOrders);
+
     return app.use('/api', router);
 }
 export default OrderRoutes;
