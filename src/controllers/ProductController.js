@@ -294,17 +294,15 @@ cloudinary.config({
   api_secret: process.env.CLOUD_API_SECRET,
 });
 
-
 const addProduct = async (req, res) => {
     try {
-        // Kiểm tra ảnh gốc có tồn tại không
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ message: "Cần ít nhất một ảnh!" });
         }
 
         const { idChiTietLoaiSanPham, tensp, xuatxu, diemtb, gia, mota } = req.body;
 
-        // Upload ảnh gốc (lấy ảnh đầu tiên)
+        // Upload ảnh chính (ảnh đầu tiên)
         const mainImageUpload = await cloudinary.uploader.upload(req.files[0].path);
         const mainImageUrl = mainImageUpload.secure_url;
 
@@ -312,75 +310,55 @@ const addProduct = async (req, res) => {
         const [productResult] = await connection.execute(
             `INSERT INTO sanpham (idChiTietLoaiSanPham, tensp, xuatxu, hinhanh, gia, mota) 
             VALUES (?, ?, ?, ?, ?, ?)`,
-            [idChiTietLoaiSanPham, tensp, xuatxu, mainImageUrl, gia, mota] // Ban đầu tồn kho = 0
+            [idChiTietLoaiSanPham, tensp, xuatxu, mainImageUrl, gia, mota]
         );
 
         const productId = productResult.insertId;
+        let colorImagesData = [];
+        const colors = req.body.colors ? JSON.parse(req.body.colors) : [];
+        const stocks = req.body.tonkho ? JSON.parse(req.body.tonkho) : [];
 
-        let colorImagesData = []; // Lưu danh sách ảnh màu sắc
-
-        // Nhận danh sách các màu sắc từ form-data
-        const colors = req.body.colors ? JSON.parse(req.body.colors) : []; // Phải là mảng JSON
-        const stocks = req.body.tonkho ? JSON.parse(req.body.tonkho) : []; // Phải là mảng JSON
-
-        // Kiểm tra nếu số lượng màu sắc và tồn kho không khớp
         if (colors.length !== stocks.length) {
-            return res.status(400).json({
-                message: "Số lượng màu sắc phải khớp với số lượng tồn kho!"
-            });
+            return res.status(400).json({ message: "Số lượng màu sắc phải khớp với số lượng tồn kho!" });
         }
 
-        // Kiểm tra nếu tồn kho không phải là số (kiểm tra số liệu, không phải chuỗi)
         for (let i = 0; i < stocks.length; i++) {
             if (isNaN(stocks[i])) {
-                return res.status(400).json({
-                    message: `Tồn kho của màu ${colors[i]} phải là một số hợp lệ!`
-                });
+                return res.status(400).json({ message: `Tồn kho của màu ${colors[i]} phải là một số hợp lệ!` });
             }
         }
 
-        const otherImages = req.files.slice(1); // Bỏ qua ảnh gốc (ảnh đầu tiên)
+        const otherImages = req.files.slice(1); // Ảnh khác ngoài ảnh chính
 
-        // Kiểm tra nếu có màu sắc
-        if (colors && colors.length > 0) {
-            // Nếu có màu sắc, lưu từng màu và tồn kho
-            for (let i = 0; i < colors.length; i++) {
-                const color = colors[i]; // Lấy màu sắc
-                const stock = parseInt(stocks[i], 10); // Lấy tồn kho tương ứng với màu sắc và chuyển thành số
-                let img = null;
+        // Lưu tất cả ảnh vào bảng `sanpham_hinhanh`
+        for (let img of otherImages) {
+            const uploadResult = await cloudinary.uploader.upload(img.path);
+            const imageUrl = uploadResult.secure_url;
 
-                // Kiểm tra nếu có ảnh cho màu sắc này
-                if (i < otherImages.length) {
-                    img = otherImages[i]; // Lấy ảnh theo index
-                }
+            await connection.execute(
+                `INSERT INTO sanpham_mau_hinhanh (idSanPham, hinhanh) VALUES (?, ?)`,
+                [productId, imageUrl]
+            );
+        }
 
-                // Nếu không có ảnh cho màu sắc này, trả lỗi
-                if (!img) {
-                    return res.status(400).json({
-                        message: `Sản phẩm màu ${color} phải có ảnh tương ứng!`
-                    });
-                }
+        // Lưu màu sắc và ảnh cho từng màu
+        for (let i = 0; i < colors.length; i++) {
+            const color = colors[i];
+            const stock = parseInt(stocks[i], 10);
+            let img = otherImages[i] ? otherImages[i] : null;
+            let imageUrl = null;
 
-                let imageUrl = null;
-                if (img) {
-                    // Upload ảnh lên Cloudinary nếu có ảnh
-                    const uploadResult = await cloudinary.uploader.upload(img.path);
-                    imageUrl = uploadResult.secure_url;
-                }
-
-                // Lưu màu và ảnh màu vào bảng sanpham_mau_hinhanh
-                await connection.execute(
-                    `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, ?, ?, ?)`,
-                    [productId, color || null, imageUrl || null, stock || null] // Lưu tồn kho cho mỗi màu, nếu không có thì là null
-                );                
-                colorImagesData.push({ tenmau: color || null, hinhanh: imageUrl || null, tonkho: stock || null });
+            if (img) {
+                const uploadResult = await cloudinary.uploader.upload(img.path);
+                imageUrl = uploadResult.secure_url;
             }
-        } else {
-            const { sl } = req.body;
+
             await connection.execute(
                 `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, ?, ?, ?)`,
-                [productId, null, null, sl] // Lưu màu và tồn kho null
+                [productId, color || null, imageUrl || null, stock || null]
             );
+
+            colorImagesData.push({ tenmau: color || null, hinhanh: imageUrl || null, tonkho: stock || null });
         }
 
         return res.status(201).json({
@@ -389,11 +367,11 @@ const addProduct = async (req, res) => {
                 idSanPham: productId,
                 tensp,
                 xuatxu,
-                hinhanh: mainImageUrl, // Hình ảnh gốc sản phẩm
+                hinhanh: mainImageUrl,
                 diemtb,
                 gia,
                 mota,
-                colors: colorImagesData, // Danh sách màu & ảnh màu
+                colors: colorImagesData
             }
         });
 
@@ -402,6 +380,7 @@ const addProduct = async (req, res) => {
         res.status(500).json({ message: "Lỗi server" });
     }
 };
+
 
 
 
