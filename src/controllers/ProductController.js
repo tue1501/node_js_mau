@@ -338,6 +338,7 @@ const addProduct = async (req, res) => {
                         `INSERT INTO sanpham_mau_hinhanh (idSanPham, hinhanh,so_luong) VALUES (?, ?, ?)`,
                         [productId, imageUrl, stocks[0]|| 0 ]   
                     );
+                    stocks[0] === 0;
                 }
             }
         } else {
