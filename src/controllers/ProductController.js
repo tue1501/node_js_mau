@@ -301,7 +301,7 @@ const addProduct = async (req, res) => {
         }
 
         const { idChiTietLoaiSanPham, tensp, xuatxu, diemtb, gia, mota } = req.body;
-
+        const { sl } = req.body;
         // Upload ảnh chính (ảnh đầu tiên)
         const mainImageUpload = await cloudinary.uploader.upload(req.files[0].path);
         const mainImageUrl = mainImageUpload.secure_url;
@@ -331,15 +331,22 @@ const addProduct = async (req, res) => {
         const otherImages = req.files.slice(1); // Ảnh khác ngoài ảnh chính
 
         if (colors.length === 0) {
-            // Nếu không có màu sắc, lưu tất cả ảnh khác vào bảng `sanpham_hinhanh`
-            for (let img of otherImages) {
-                const uploadResult = await cloudinary.uploader.upload(img.path);
-                const imageUrl = uploadResult.secure_url;
-                
+            if (req.files.length === 1) {
+                // Nếu chỉ có một ảnh, lưu bản ghi với màu null, ảnh null, và số lượng tồn kho
                 await connection.execute(
-                    `INSERT INTO sanpham_hinhanh (idSanPham, hinhanh) VALUES (?, ?)`,
-                    [productId, imageUrl]
+                    `INSERT INTO sanpham_mau_hinhanh (idSanPham, tenmau, hinhanh, so_luong) VALUES (?, NULL, NULL, ?)`,
+                    [productId, sl]
                 );
+            } else {
+                // Nếu không có màu sắc, lưu tất cả ảnh khác vào bảng `sanpham_hinhanh`
+                for (let img of otherImages) {
+                    const uploadResult = await cloudinary.uploader.upload(img.path);
+                    const imageUrl = uploadResult.secure_url;
+                    await connection.execute(
+                        `INSERT INTO sanpham_hinhanh (idSanPham, hinhanh) VALUES (?, ?)`,
+                        [productId, imageUrl]
+                    );
+                }
             }
         } else {
             // Nếu có màu, kiểm tra số lượng ảnh có đủ cho từng màu không
@@ -388,11 +395,6 @@ const addProduct = async (req, res) => {
         res.status(500).json({ message: "Lỗi server" });
     }
 };
-
-
-
-
-
 
 const updateProduct = async (req, res) => {
     try {
