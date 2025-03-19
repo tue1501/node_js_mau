@@ -96,61 +96,23 @@ const deleteorder = async (req, res) => {
         return res.status(500).json({ message: 'Error updating customer', error });
     }
 };
-
 const getAllOrders = async (req, res) => {
     try {
-        // Lấy tất cả đơn hàng cùng với tên khách hàng
+        // Truy vấn đơn hàng với trường ngày tạo (ngaytao) và ngày giao hàng (ngaygiaohang) trong khoảng thời gian từ fromDate đến toDate
         const [orders] = await connection.execute(
-            `SELECT dh.iddonhang, dh.idKhachHang, dh.ghichu, kh.hoten
-            FROM donhang dh
-            JOIN khachhang kh ON dh.idKhachHang = kh.idKhachHang`
+            `SELECT idDonhang, tenkh, sdtkh, ngaytao, ngaygiaohang, tongtien, ghichu, trangthai
+             FROM donhang`,
         );
 
-        const orderDetails = [];
-
-        for (const order of orders) {
-            // Lấy sản phẩm trong đơn hàng, đổi idSanPham thành idMau
-            const [products] = await connection.execute(
-                `SELECT 
-                    p.idSanPham,
-                    c.idMau,
-                    c.sl,
-                    p.tensp,
-                    p.gia,
-                    p.xuatxu,
-                    p.tonkho,
-                    p.mota,
-                    -- Lấy ảnh từ bảng màu, nếu không có thì lấy ảnh từ bảng sản phẩm
-                    COALESCE(mh.hinhanh, p.hinhanh) AS hinhanh
-                FROM chitietdonhang c
-                LEFT JOIN sanpham_mau_hinhanh mh ON c.idMau = mh.id
-                LEFT JOIN sanpham p ON mh.idSanPham = p.idSanPham
-                WHERE c.idDonhang = ?`,
-                [order.iddonhang]
-            );
-
-            // Cập nhật đường dẫn hình ảnh đầy đủ
-            const updatedProducts = products.map(product => ({
-                ...product,
-                hinhanh: product.hinhanh 
-            }));
-
-            // Thêm vào mảng kết quả
-            orderDetails.push({
-                iddonhang: order.iddonhang,
-                tenKhachHang: order.hoten, // Lấy tên khách hàng
-                ghichu: order.ghichu, // Lấy ghi chú từ bảng donhang
-                products: updatedProducts
-            });
+        // Kiểm tra nếu không có đơn hàng nào
+        if (orders.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không có đơn hàng nào trong khoảng thời gian này' });
         }
 
-        return res.status(200).json({ data: orderDetails });
-    } catch (err) {
-        console.error(err);
-        return res.json({
-            message: 'Error fetching orders',
-            error: err,
-        });
+        res.json({ success: true, data: orders });
+    } catch (error) {
+        console.error('Lỗi khi lấy đơn hàng :', error);
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
     }
 };
 
