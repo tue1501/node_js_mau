@@ -80,7 +80,7 @@ const deleteorder = async (req, res) => {
         const query = `
             UPDATE donhang 
             SET
-                trangthai = 0
+                trangthai = 4
             WHERE iddonhang = ?
         `;
         const [result] = await connection.execute(query, [

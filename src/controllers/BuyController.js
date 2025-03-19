@@ -89,6 +89,11 @@ const Pay = async (req, res) => {
 
         const { hoten: customerName, sdt: customerPhone, diachi: customerAddress } = customer[0];
 
+        // Kiểm tra nếu địa chỉ của khách hàng là null
+        if (!customerAddress) {
+            return res.status(400).json({ message: 'Customer address is required to place an order' });
+        }
+
         // Kiểm tra mã giảm giá nếu có
         if (iddiscount) {
             const [discountDetails] = await connection.execute(
@@ -222,10 +227,6 @@ const Pay = async (req, res) => {
         return res.status(500).json({ message: 'Server error', error });
     }
 };
-
-
-
-
 
 export default {
     Pay,
