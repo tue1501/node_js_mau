@@ -160,7 +160,10 @@ const getOrderById = async (req, res) => {
     try {
         // Lấy thông tin đơn hàng theo ID
         const [orders] = await connection.execute(
-            `SELECT iddonhang, idKhachHang, ghichu FROM donhang WHERE iddonhang = ?`,
+            `SELECT dh.iddonhang, dh.ghichu, kh.hoten
+            FROM donhang dh
+            JOIN khachhang kh ON dh.idKhachHang = kh.idKhachHang
+            WHERE dh.iddonhang = ?`,
             [id]
         );
 
@@ -168,9 +171,7 @@ const getOrderById = async (req, res) => {
             return res.status(404).json({ message: 'Order not found!' });
         }
 
-        const order = orders[0];
-
-        // Lấy sản phẩm trong đơn hàng, đổi idSanPham thành idMau
+        const order = orders[0];        // Lấy sản phẩm trong đơn hàng, đổi idSanPham thành idMau
         const [products] = await connection.execute(
             `SELECT 
                 p.idSanPham,
@@ -190,18 +191,18 @@ const getOrderById = async (req, res) => {
             [order.iddonhang]
         );
 
-        // Cập nhật đường dẫn hình ảnh đầy đủ
-        const updatedProducts = products.map(product => ({
-            ...product,
-            hinhanh: product.hinhanh 
-        }));
+        // // Cập nhật đường dẫn hình ảnh đầy đủ
+        // const updatedProducts = products.map(product => ({
+        //     ...product,
+        //     hinhanh: product.hinhanh 
+        // }));
 
         // Trả về thông tin đơn hàng và sản phẩm
         return res.status(200).json({
             iddonhang: order.iddonhang,
-            idKhachHang: order.idKhachHang,
+            hoten: order.hoten,
             ghichu: order.ghichu,
-            products: updatedProducts
+            products: products
         });
     } catch (err) {
         console.error(err);
