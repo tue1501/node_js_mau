@@ -109,7 +109,7 @@ const Pay = async (req, res) => {
         // Lấy thông tin sản phẩm dựa trên `idMau`
         const placeholders = idMau.map(() => '?').join(',');  // Tạo các placeholders cho mảng
         const [products] = await connection.execute(
-            `SELECT smh.idSanPham, smh.id as idMau, s.tensp, s.gia, smh.hinhanh, smh.tenmau
+            `SELECT smh.idSanPham, smh.id as idMau, s.tensp, s.gia, smh.hinhanh, smh.tenmau, smh.so_luong
              FROM sanpham_mau_hinhanh smh
              JOIN sanpham s ON smh.idSanPham = s.idSanPham
              WHERE smh.id IN (${placeholders})`,
@@ -121,6 +121,16 @@ const Pay = async (req, res) => {
             const product = products[i];
             const productQuantity = quantity[idMau.indexOf(product.idMau)] || 1;
             total += product.gia * productQuantity;
+
+            // Trừ số lượng sản phẩm trong bảng mau_hinhanh
+            const newQuantity = product.so_luong - productQuantity;
+            if (newQuantity < 0) {
+                return res.status(400).json({ message: `Not enough quantity for product ${product.tensp}` });
+            }
+            await connection.execute(
+                'UPDATE sanpham_mau_hinhanh SET so_luong = ? WHERE id = ?',
+                [newQuantity, product.idMau]
+            );
         }
 
         // Tính toán giảm giá nếu có
