@@ -15,6 +15,8 @@ const Cart = (app) => {
 
     router.delete('/remove-from-cart',authenticateJWT, CartController.removeMultipleFromCart);
 
+    router.post('/addcart',authenticateJWT, CartController.addCart);
+
     return app.use('/api', router);
 }
 export default Cart;

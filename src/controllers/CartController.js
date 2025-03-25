@@ -1,3 +1,4 @@
+import c from 'config';
 import connection from '../config/database.js';  // Đảm bảo bạn có kết nối với cơ sở dữ liệu
 import jwt from 'jsonwebtoken';
 const CartController = {
@@ -66,7 +67,7 @@ const CartController = {
             const id = req.user.id;
             // Lấy các sản phẩm trong giỏ hàng của người dùng theo idMau
             const [cartItems] = await connection.query(
-                `SELECT c.idgiohanghang , c.idMau, c.sl, 
+                `SELECT c.idgiohanghang , c.idMau, m.so_luong, 
                         sp.tensp, sp.xuatxu, sp.diemtb, sp.gia, sp.tonkho, sp.mota, 
                         m.tenmau, 
                         CASE 
@@ -196,7 +197,49 @@ const CartController = {
             console.error(error);
             res.status(500).json({ message: 'Server error' });
         }
-    }      
+    },  
+    async addCart(req, res) {
+        try {
+            // Lấy ID khách hàng từ token
+            const idkhachhang = req.user.id;
+    
+            // Lấy idmau và số lượng từ request body
+            let { idmau, sl } = req.body;
+            
+            if (!idmau) {
+                return res.status(400).json({ message: 'Product Color ID is required' });
+            }   
+
+            if (!Number.isInteger(sl) || sl <= 0) {
+                return res.status(400).json({ message: 'Quantity must be a positive integer' });
+            }
+    
+            const [product] = await connection.query(
+                'SELECT so_luong FROM sanpham_mau_hinhanh WHERE id = ?',
+                [idmau]
+            );
+    
+            if (product.length === 0) {
+                return res.status(404).json({ message: 'Product not found' });
+            }
+    
+            const so_luong = product[0].so_luong;
+    
+            if (sl > so_luong) {
+                return res.status(400).json({
+                    message: `Not enough stock. Available: ${so_luong}, Requested: ${sl}`
+                });
+            }
+            await connection.query(
+                'UPDATE giohang SET sl = ? WHERE idkhachhang = ? AND idMau = ?',
+                [sl, idkhachhang, idmau]
+            );
+            return res.status(200).json({ message: 'Product quantity updated in cart' });
+        } catch (error) {
+            console.error('Error in addToCart:', error);
+            res.status(500).json({ message: 'Server error' });
+        }
+    },
 };
 
 export default CartController;
