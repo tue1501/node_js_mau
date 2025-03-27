@@ -151,74 +151,64 @@ const CartController = {
         try {
             const idkhachhang = req.user.id;
     
-            // Kiểm tra sản phẩm có trong giỏ hàng không
-            const [existingProduct] = await connection.query(
-                'SELECT sl FROM giohang WHERE idkhachhang = ? AND idMau = ?',
+            // Truy vấn giỏ hàng + tồn kho trong 1 lần
+            const [[productData]] = await connection.query(
+                `SELECT g.sl AS cartQuantity, s.so_luong AS tonkho 
+                 FROM giohang g 
+                 JOIN sanpham_mau_hinhanh s ON g.idMau = s.id 
+                 WHERE g.idkhachhang = ? AND g.idMau = ?`,
                 [idkhachhang, idmau]
             );
     
-            if (existingProduct.length === 0) {
-                return res.status(404).json({ message: 'Product not found in cart' });
+            if (!productData) {
+                return res.status(404).json({ message: 'Product not found in cart or stock' });
             }
     
-            let currentQuantity = existingProduct[0].sl;
-    
-            // Lấy số lượng tồn kho của sản phẩm
-            const [productStock] = await connection.query(
-                'SELECT so_luong FROM sanpham_mau_hinhanh WHERE id = ?',
-                [idmau]
-            );
-    
-            if (productStock.length === 0) {
-                return res.status(404).json({ message: 'Product not found in stock' });
-            }
-    
-            const tonkho = productStock[0].so_luong;
-            let newQuantity = currentQuantity;
+            let { cartQuantity, tonkho } = productData;
+            let newQuantity = cartQuantity;
     
             if (status === 'decrease') {
-                newQuantity = currentQuantity - 1;
+                newQuantity = cartQuantity - 1;
     
                 if (newQuantity <= 0) {
-                    // Xóa sản phẩm khỏi giỏ nếu số lượng <= 0
+                    // Xóa sản phẩm nếu số lượng về 0
                     await connection.query(
                         'DELETE FROM giohang WHERE idkhachhang = ? AND idMau = ?',
                         [idkhachhang, idmau]
                     );
                     return res.status(200).json({ message: 'Product removed from cart' });
-                } else {
-                    // Cập nhật số lượng nếu > 0
-                    await connection.query(
-                        'UPDATE giohang SET sl = ? WHERE idkhachhang = ? AND idMau = ?',
-                        [newQuantity, idkhachhang, idmau]
-                    );
-                    return res.status(200).json({ message: 'Product quantity decreased' });
                 }
             }
     
             if (status === 'increase') {
-                newQuantity = currentQuantity + 1;
+                newQuantity = cartQuantity + 1;
     
                 if (newQuantity > tonkho) {
                     return res.status(400).json({
-                        message: `Cannot increase quantity`,
+                        message: `Only ${tonkho - cartQuantity} more items available.`,
                     });
                 }
+            }
     
+            // Chỉ cập nhật nếu số lượng thay đổi
+            if (newQuantity !== cartQuantity) {
                 await connection.query(
                     'UPDATE giohang SET sl = ? WHERE idkhachhang = ? AND idMau = ?',
                     [newQuantity, idkhachhang, idmau]
                 );
-                return res.status(200).json({ message: 'Product quantity increased' });
+    
+                return res.status(200).json({
+                    message: status === 'increase' ? 'Product quantity increased' : 'Product quantity decreased',
+                });
             }
     
-            return res.status(400).json({ message: 'Invalid status, must be "increase" or "decrease"' });
+            return res.status(400).json({ message: 'Invalid status or no change in quantity' });
     
         } catch (error) {
             console.error(error);
-            res.status(500).json({ message: 'Server error' });
+            return res.status(500).json({ message: 'Server error' });
         }
-    },    
+    },       
     async addCart(req, res) {
         try {
             // Lấy ID khách hàng từ token

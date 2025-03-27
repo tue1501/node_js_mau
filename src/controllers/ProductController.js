@@ -845,7 +845,49 @@ const updateProductType = async (req, res) => {
         });
     }
 };
+const getProductByColorId = async (req, res) => {
+    try {
+        const { id } = req.params; // Lấy idmau từ URL
 
+        // Truy vấn lấy thông tin sản phẩm theo idmau
+        const [result] = await connection.execute(
+            `
+            SELECT 
+            sp.idSanPham,
+            sp.tensp,
+            sp.xuatxu,
+            sp.gia,
+            sp.mota,
+            smh.tenmau,
+            COALESCE(smh.hinhanh, sp.hinhanh) AS hinhanh, -- Nếu smh.hinhanh null thì lấy sp.hinhanh
+            smh.so_luong    
+            FROM 
+            sanpham_mau_hinhanh smh
+            JOIN 
+            sanpham sp ON smh.idSanPham = sp.idSanPham
+            WHERE 
+            smh.id = ?
+            `,
+            [id]
+        );
+
+        // Kiểm tra nếu không tìm thấy sản phẩm
+        if (result.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy sản phẩm với idmau này' });
+        }
+
+        // Trả về thông tin sản phẩm
+        return res.json({
+            data: result[0],
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            message: 'Lỗi khi lấy thông tin sản phẩm theo idmau',
+            error: err,
+        });
+    }
+};
 
 
 const updateProductTypeDetail = async (req, res) => {
@@ -980,5 +1022,5 @@ const search = async (req, res) => {
 export default {
     getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType
     ,getProductById,sendSms,verifyOtp,changePassword, addProduct,addProductType
-    ,addProductTypeDetail,updateProductType,updateProductTypeDetail,updateProduct,search
+    ,addProductTypeDetail,updateProductType,updateProductTypeDetail,updateProduct,search,getProductByColorId
 };
