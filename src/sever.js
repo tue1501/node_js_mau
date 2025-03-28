@@ -14,7 +14,7 @@ import discount from './route/discount.js';
 import revenue from './route/revenue.js';
 import cors from 'cors';
 import User from './route/user.js';
-import Email from './route/email.js';
+import emailRoutes from './route/email.js';
 dotenv.config();
 
 const app = express(); 
@@ -93,7 +93,7 @@ setupRoutes(app);
 Cart(app);
 Buy(app);
 OrderRoutes(app);
-Email(app);
+emailRoutes(app);
 Evaluate(app);
 discount(app);
 const __filename = fileURLToPath(import.meta.url);

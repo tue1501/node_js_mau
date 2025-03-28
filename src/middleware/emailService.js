@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';  // Import nodemailer
+import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
 dotenv.config();  // Load biến môi trường từ .env
@@ -6,7 +6,7 @@ dotenv.config();  // Load biến môi trường từ .env
 // Hàm gửi email
 async function sendEmail({ to, subject, text }) {
   const transporter = nodemailer.createTransport({
-    service: 'gmail',  // Hoặc sử dụng dịch vụ email khác như Mailgun, SendGrid...
+    service: 'gmail',  // Hoặc dịch vụ email khác như Mailgun, SendGrid...
     auth: {
       user: process.env.EMAIL_USER,  // Lấy giá trị từ .env
       pass: process.env.EMAIL_PASS   // Lấy giá trị từ .env
@@ -28,4 +28,5 @@ async function sendEmail({ to, subject, text }) {
   }
 }
 
-export default { sendEmail };  // Xuất hàm sendEmail
+// Đảm bảo xuất sendEmail chính xác
+export { sendEmail };

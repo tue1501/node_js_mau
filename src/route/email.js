@@ -1,11 +1,16 @@
-import express from "express";
+import express from 'express';
+
 import EmailController from '../controllers/EmailController.js';
-import authenticateJWT from '../middleware/authenticate.js';
 
 const router = express.Router();
-const Emai = (app) => {
-    router.post('/sendmail', EmailController.sendEmailController);
-    return app.use('/api', router);
-}
 
-export default Emai;
+// Định nghĩa các route liên quan đến email
+const emailRoutes = (app) => {
+    // Đăng ký route POST gửi email
+    router.post('/sendmail', EmailController.send);
+    
+    // Sử dụng router trong ứng dụng
+    return app.use('/api', router);
+};
+
+export default emailRoutes;

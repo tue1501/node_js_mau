@@ -1,83 +1,141 @@
-// controllers/UserController.js
-import connection from '../config/database.js'
+import { sendEmail } from '../middleware/emailService.js';
 import jwt from 'jsonwebtoken';
-// src/controllers/authController.js
 import twilio from 'twilio';
-// import connection from '../config/database.js';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
-// Sử dụng import (ES Modules)
 import { fileURLToPath } from "url";
+import connection from '../config/database.js';
 import path from "path";
 import fs from 'fs/promises'; // Import fs.promises để dùng với async/await
-// Tạo __dirname theo cách thủ công trong ES module
+import { jwtBlacklist } from '../middleware/jwtBlacklist.js';  // Import blacklist từ jwtBlacklist.js
+import cloudinary from 'cloudinary';
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
+dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-import { jwtBlacklist } from '../middleware/jwtBlacklist.js';  // Import blacklist từ jwtBlacklist.js
-import multer from 'multer';
-
-
-dotenv.config();
-
-// Cấu hình Twilio
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
-
 const client = new twilio(accountSid, authToken);
-
-// Bộ nhớ tạm thời để lưu OTP (nên thay bằng Redis hoặc Database trong thực tế)
 const otpStore = new Map(); 
-
-const sendSms = async (req, res) => {
+const sendOtp = async (req, res) => {
     try {
-      const { sdt } = req.body; // Lấy số điện thoại từ request
-  
-      // Kiểm tra xem số điện thoại có được truyền vào không
-      if (!sdt) {
-        return res.status(400).json({ success: false, error: "Missing 'sdt' field" });
-      }
-  
-      // Truy vấn dữ liệu khách hàng từ cơ sở dữ liệu
+        const { sdt, gmail } = req.body; // Lấy sdt hoặc gmail từ request
+        
+        // Kiểm tra xem có ít nhất một trường được cung cấp
+        if (!sdt && !gmail) {
+            return res.status(400).json({ success: false, error: "Missing 'sdt' or 'gmail' field" });
+        }
+        
+        // Truy vấn dữ liệu khách hàng từ cơ sở dữ liệu
+        let queryField = sdt ? 'sdt' : 'gmail';
+      let queryValue = sdt || gmail;
       const [rows] = await connection.query(
-        'SELECT * FROM khachhang WHERE sdt = ?',
-        [sdt]
+        `SELECT * FROM khachhang WHERE ${queryField} = ?`,
+        [queryValue]
       );
   
-      // Kiểm tra nếu không có dữ liệu trả về từ query
       if (rows.length === 0) {
-        return res.status(404).json({ success: false, message: 'Số điện thoại không tồn tại' });
+        return res.status(404).json({
+          success: false,
+          message: `${sdt ? 'Số điện thoại' : 'Email'} không tồn tại`,
+        });
       }
-  
-      // Định dạng số điện thoại với mã quốc gia +1 nếu cần
-      const to = sdt.startsWith('+1') ? sdt : '+1' + sdt;
   
       // Tạo mã OTP ngẫu nhiên 6 chữ số
       const otp = Math.floor(100000 + Math.random() * 900000);
+      otpStore.set(queryValue, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
   
-      // Lưu OTP vào bộ nhớ tạm thời (có thể sử dụng Redis hoặc Database thực tế)
-      otpStore.set(sdt, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+      // Tạo token JWT
+      const token = jwt.sign(
+        { [queryField]: queryValue }, // Lưu sdt hoặc gmail vào token
+        process.env.JWT_SECRET,
+        { expiresIn: '10m' }
+      );
   
-      // Nội dung tin nhắn OTP
-      const messageBody = `Your verification code is: ${otp}. It will expire in 5 minutes.`;
-
-      // Gửi OTP qua SMS
-    const token = jwt.sign(
-        { sdt },  // Payload chứa số điện thoại
-        process.env.JWT_SECRET, // Mã bí mật của bạn (đặt trong file .env)
-        { expiresIn: '10m' }    // Token hết hạn sau 10 phút (hoặc thời gian tùy chỉnh)
-    );
-      const message = await client.messages.create({
-        body: messageBody,
-        from: process.env.TWILIO_PHONE_NUMBER, // Số Twilio
-        to,
-      });
+      // Gửi OTP qua SMS nếu có sdt
+      if (sdt) {
+         // Định dạng số điện thoại với mã quốc gia +1 nếu cần
+        const to = sdt.startsWith('+1') ? sdt : '+1' + sdt;  
+        // Nội dung tin nhắn OTP
+        const messageBody = `Your verification code is: ${otp}. It will expire in 5 minutes.`;
+        // Gửi OTP qua SMS
+        const token = jwt.sign(
+            { sdt },  // Payload chứa số điện thoại
+            process.env.JWT_SECRET, // Mã bí mật của bạn (đặt trong file .env)
+            { expiresIn: '10m' }    // Token hết hạn sau 10 phút (hoặc thời gian tùy chỉnh)
+        );
+        const message = await client.messages.create({
+            body: messageBody,
+            from: process.env.TWILIO_PHONE_NUMBER, // Số Twilio
+            to,
+        });
+    
+        return res.status(200).json({
+            success: true,
+            message: 'OTP sent successfully!',
+            sid: message.sid,
+            to,
+            token : token
+        });
+        }
+    
+        // Gửi OTP qua Gmail nếu có gmail
+        if (gmail) {
+            const subject = 'Mã OTP xác thực của bạn';
+            const text = `Mã xác thực của bạn là: ${otp}. Mã này sẽ hết hạn sau 5 phút.`;
+    
+            const result = await sendEmail({ to: gmail, subject, text });
+    
+            return res.status(200).json({
+            success: true,
+            message: 'OTP sent successfully via email!',
+            info: result,
+            token: token,
+            });
+        }
+        } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: error.message,
+        });
+    }
+  };
+  
+  // Xác thực OTP
+  const verifyOtp = async (req, res) => {
+    try {
+      const { otp } = req.body;
+      const { sdt, gmail } = req.user; // Lấy sdt hoặc gmail từ token
+      const identifier = sdt || gmail; // Xác định khóa (sdt hoặc gmail)
+  
+      if (!identifier || !otp) {
+        return res.status(400).json({ success: false, error: "Missing identifier or 'otp' field" });
+      }
+  
+      const storedOtpData = otpStore.get(identifier);
+  
+      if (!storedOtpData) {
+        return res.status(400).json({ success: false, error: "OTP expired or not found" });
+      }
+  
+      if (storedOtpData.otp !== parseInt(otp, 10)) {
+        return res.status(400).json({ success: false, error: "Invalid OTP" });
+      }
+  
+      if (Date.now() > storedOtpData.expiresAt) {
+        otpStore.delete(identifier);
+        return res.status(400).json({ success: false, error: "OTP expired" });
+      }
+  
+      otpStore.delete(identifier);
   
       return res.status(200).json({
         success: true,
-        message: 'OTP sent successfully!',
-        sid: message.sid,
-        to,
-        token : token
+        message: "OTP verified successfully!",
       });
     } catch (error) {
       return res.status(500).json({
@@ -87,141 +145,81 @@ const sendSms = async (req, res) => {
     }
   };
   
-// Xác thực OTP
-const verifyOtp = async (req, res) => {
-    try {
-        const { otp } = req.body;
-        const phoneNumber = req.user.sdt; // Lấy ID từ token đã giải mã
-        if (!phoneNumber || !otp) {
-            return res.status(400).json({ success: false, error: "Missing 'phoneNumber' or 'otp' field" });
-        }
-
-        // Lấy dữ liệu OTP đã lưu trong bộ nhớ
-        const storedOtpData = otpStore.get(phoneNumber);
-
-        if (!storedOtpData) {
-            return res.status(400).json({ success: false, error: "OTP expired or not found" });
-        }
-
-        // Kiểm tra OTP có đúng hay không
-        if (storedOtpData.otp !== parseInt(otp, 10)) {
-            return res.status(400).json({ success: false, error: "Invalid OTP" });
-        }
-
-        // Kiểm tra nếu OTP đã hết hạn
-        if (Date.now() > storedOtpData.expiresAt) {
-            otpStore.delete(phoneNumber); // Xóa OTP đã hết hạn
-            return res.status(400).json({ success: false, error: "OTP expired" });
-        }
-
-        // Xóa OTP khỏi bộ nhớ sau khi xác thực thành công
-        otpStore.delete(phoneNumber);
-
-        // Trả về kết quả xác thực OTP thành công
-        return res.status(200).json({
-            success: true,
-            message: "OTP verified successfully!",
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            error: error.message,
-        });
-    }
-};
-
-
-dotenv.config();
-
-// Đổi mật khẩu
-const changePassword = async (req, res) => {
+  // Đổi mật khẩu
+  const changePassword = async (req, res) => {
     try {
       const { newPassword } = req.body;
-
       const authHeader = req.headers['authorization'];
-
-        // Kiểm tra xem có token trong header không
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ success: false, error: "Unauthorized: No token provided" });
-        }
-
-        // Giải mã token
-        const token = authHeader.split(' ')[1];
-        let decoded;
-
-        try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET); // Kiểm tra tính hợp lệ của token
-        } catch (err) {
-            return res.status(401).json({ success: false, error: "Invalid or expired token" });
-        }
-    const phoneNumber = decoded.sdt; // Số điện thoại lưu trong token
-    const passwordRegex = /^.{8,}$/;  // Mật khẩu phải có ít nhất 8 ký tự
-    if (!passwordRegex.test(newPassword)) {
-        return res.status(400).json({ message: "Password must be at least 8 characters long." });        
-    }
-      // Truy vấn cơ sở dữ liệu với số điện thoại đã được chỉnh sửa
+  
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ success: false, error: "Unauthorized: No token provided" });
+      }
+  
+      const token = authHeader.split(' ')[1];
+      let decoded;
+  
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (err) {
+        return res.status(401).json({ success: false, error: "Invalid or expired token" });
+      }
+  
+      const { sdt, gmail } = decoded; // Lấy sdt hoặc gmail từ token
+      const identifier = sdt || gmail;
+      const queryField = sdt ? 'sdt' : 'gmail';
+  
+      const passwordRegex = /^.{8,}$/;
+      if (!passwordRegex.test(newPassword)) {
+        return res.status(400).json({ message: "Password must be at least 8 characters long." });
+      }
+  
       const [rows] = await connection.query(
-        'SELECT idKhachHang FROM khachhang WHERE sdt = ?',
-        [phoneNumber]
+        `SELECT idKhachHang FROM khachhang WHERE ${queryField} = ?`,
+        [identifier]
       );
   
-    if (rows.length === 0) {
-    return res.status(404).json({ message: 'User not found!' });
-    }
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'User not found!' });
+      }
   
-    const id = rows[0]?.idKhachHang;
-
-    if (!id) {
+      const id = rows[0]?.idKhachHang;
+  
+      if (!id) {
         return res.status(400).json({ success: false, error: "Invalid customer ID" });
-    }
-
-    if (!newPassword) {
-    return res.status(400).json({ success: false, error: "Missing 'newPassword' field" });
-    }
+      }
+  
+      if (!newPassword) {
+        return res.status(400).json({ success: false, error: "Missing 'newPassword' field" });
+      }
   
       const saltRounds = 10;
-              const hashedmatkhau = await bcrypt.hash(newPassword, saltRounds);
-              // Cập nhật thông tin khách hàng
-              const query = `
-                  UPDATE khachhang 
-                  SET 
-                      matkhau = COALESCE(?, matkhau)
-                  WHERE idKhachHang = ?
-              `;
-              const [result] = await connection.execute(query, [
-                  hashedmatkhau || null,
-                  id,
-              ]);
+      const hashedmatkhau = await bcrypt.hash(newPassword, saltRounds);
+  
+      const query = `
+        UPDATE khachhang 
+        SET matkhau = COALESCE(?, matkhau)
+        WHERE idKhachHang = ?
+      `;
+      const [result] = await connection.execute(query, [hashedmatkhau || null, id]);
+  
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: 'Customer not found' });
-      }     
-          if (!token) {
-              return res.status(400).json({ success: false, message: 'Token missing' });
-          }
-      
-          try {
-              const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Giải mã token để lấy thông tin người dùng
-              // Thêm token vào blacklist
-              jwtBlacklist.add(token);  // Đưa token vào blacklist để không sử dụng lại
-      
-              res.clearCookie('token');  // Nếu bạn dùng cookie để lưu token
-              return res.status(200).json({
-                success: true,
-                message: "Password changed successfully!",
-              });
-          } catch (error) {
-            return res.status(500).json({
-                success: false,
-                error: error.message,
-          });
-        }    
+      }
+  
+      jwtBlacklist.add(token);
+      res.clearCookie('token');
+  
+      return res.status(200).json({
+        success: true,
+        message: "Password changed successfully!",
+      });
     } catch (error) {
       return res.status(500).json({
         success: false,
         error: error.message,
       });
     }
-  };  
+  }; 
   
 
 
@@ -284,15 +282,6 @@ const producttype = async (req, res) => {
 };
 
 
-import cloudinary from 'cloudinary';
-import c from 'config';
-
-// Sử dụng CLOUDINARY_URL từ biến môi trường
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.CLOUD_API_KEY,
-  api_secret: process.env.CLOUD_API_SECRET,
-});
 
 const addProduct = async (req, res) => {
     try {
@@ -1021,6 +1010,6 @@ const search = async (req, res) => {
 // Xuất khẩu hàm getAllUsers
 export default {
     getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType
-    ,getProductById,sendSms,verifyOtp,changePassword, addProduct,addProductType
+    ,getProductById,sendOtp,verifyOtp,changePassword, addProduct,addProductType
     ,addProductTypeDetail,updateProductType,updateProductTypeDetail,updateProduct,search,getProductByColorId
 };
