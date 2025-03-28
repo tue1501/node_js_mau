@@ -14,6 +14,9 @@ const OrderRoutes = (app) => {
     // Route to get order details by order ID
     router.get('/orders/:id', OrderController.getOrderById);
 
+    // Route to get order details by order ID
+    router.get('/order/:id', authenticateJWT,OrderController.order);
+
     return app.use('/api', router);
 }
 export default OrderRoutes;

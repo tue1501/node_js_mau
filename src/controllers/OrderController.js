@@ -24,11 +24,13 @@ const orderbyid = async (req, res) => {
                     p.xuatxu,
                     p.tonkho,
                     p.mota,
+                    dh.*,
                     -- Lấy ảnh từ bảng màu, nếu không có thì lấy ảnh từ bảng sản phẩm
                     COALESCE(mh.hinhanh, p.hinhanh) AS hinhanh
                 FROM chitietdonhang c
                 LEFT JOIN sanpham_mau_hinhanh mh ON c.idMau = mh.id
                 LEFT JOIN sanpham p ON mh.idSanPham = p.idSanPham
+                LEFT JOIN donhang dh ON c.idDonhang = dh.iddonhang
                 WHERE c.idDonhang = ?`,
                 [order.iddonhang]
             );
@@ -144,6 +146,7 @@ const getOrderById = async (req, res) => {
                 p.xuatxu,
                 p.tonkho,
                 p.mota,
+                c.*,
                 -- Lấy ảnh từ bảng màu, nếu không có thì lấy ảnh từ bảng sản phẩm
                 COALESCE(mh.hinhanh, p.hinhanh) AS hinhanh
             FROM chitietdonhang c
@@ -174,10 +177,33 @@ const getOrderById = async (req, res) => {
         });
     }
 };
+const order = async (req, res) => {
+    const { id } = req.params;
+    const  idkhachhang  = req.user.id;
+    try {
+        // Lấy thông tin đơn hàng theo ID
+        const [orders] = await connection.execute(
+            `SELECT idDonhang, trangthai, tt_cod, tt_online
+            FROM donhang 
+            WHERE idDonhang = ? AND idKhachHang = ?`,
+            [id, idkhachhang]
+        );
+        return res.status(200).json({
+            orders: orders,
+        });
+    } catch (err) {
+        console.error(err);
+        return res.json({
+            message: 'Error fetching order by ID',
+            error: err,
+        });
+    }
+};
 
 export default {
     orderbyid,
     deleteorder,
     getAllOrders,
-    getOrderById
+    getOrderById,
+    order
 };

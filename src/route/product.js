@@ -22,10 +22,6 @@ const initAPiRouter = (app) => {
 
     router.get('/getProductById/:id',authenticateJWT, ProductController.getProductById);
 
-    // router.get('/otp',AuthController.otp);
-
-    // router.post('/send-otp',ProductController.sendOtp);
-
     router.post('/send-sms', ProductController.sendSms);
 
     router.post('/verify-otp',authenticateJWTphone,ProductController.verifyOtp);
