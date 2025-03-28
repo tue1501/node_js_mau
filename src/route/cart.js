@@ -1,7 +1,6 @@
 import express from "express";
 import CartController from '../controllers/CartController.js';
 import authenticateJWT from '../middleware/authenticate.js';
-
 const router = express.Router();
 const Cart = (app) => {
     // Thêm sản phẩm vào giỏ hàng

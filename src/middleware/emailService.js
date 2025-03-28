@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();  // Load biến môi trường từ .env
 
 // Hàm gửi email
-async function sendEmail({ to, subject, text }) {
+async function sendEmail({ to, html }) {
   const transporter = nodemailer.createTransport({
     service: 'gmail',  // Hoặc dịch vụ email khác như Mailgun, SendGrid...
     auth: {
@@ -16,8 +16,8 @@ async function sendEmail({ to, subject, text }) {
   const mailOptions = {
     from: process.env.EMAIL_USER,  // Địa chỉ email gửi
     to,
-    subject,
-    text
+    subject: 'Petland',  // Tiêu đề email
+    html  // Nội dung email dạng HTML
   };
 
   try {

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hóa Đơn</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .invoice {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+        .invoice-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .invoice-header h1 {
+            margin: 0;
+        }
+        .invoice-details {
+            margin-bottom: 20px;
+        }
+        .invoice-details table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .invoice-details th, .invoice-details td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .invoice-total {
+            text-align: right;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        .btn-export {
+            display: inline-block;
+            width: 200px;
+            margin: 10px 10px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .btn-export:hover {
+            background-color: #45a049;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="invoice">
+        <div class="invoice-header">
+            <h1>Hóa Đơn</h1>
+            <input type="text">
+            <p>Ngày: <strong id="date"></strong></p>
+        </div>
+
+        <div class="invoice-details">
+            <table id="invoiceTable">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Đơn giá</th>
+                        <th>Số lượng</th>
+                        <th>Tổng cộng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Sản phẩm 1</td>
+                        <td>100.000 VND</td>
+                        <td>2</td>
+                        <td>200.000 VND</td>
+                    </tr>
+                    <tr>
+                        <td>Sản phẩm 2</td>
+                        <td>50.000 VND</td>
+                        <td>3</td>
+                        <td>150.000 VND</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="invoice-total">
+            <p><strong>Tổng cộng:</strong> 350.000 VND</p>
+        </div>
+        
+        <!-- Nút xuất PDF, Excel, Word -->
+        <button class="btn-export" onclick="exportToPDF()">Xuất PDF</button>
+        <button class="btn-export" onclick="exportToExcel()">Xuất Excel</button>
+        <button class="btn-export" onclick="exportToWord()">Xuất Word</button>
+    </div>
+
+    <script>
+        const dateElement = document.getElementById('date');
+        const currentDate = new Date();
+        dateElement.textContent = currentDate.toLocaleDateString('vi-VN');
+
+        // Xuất PDF
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.text("Hóa Đơn", 10, 10);
+            doc.text(`Ngày: ${currentDate.toLocaleDateString('vi-VN')}`, 10, 20);
+
+            // Thêm bảng dữ liệu
+            const table = document.getElementById("invoiceTable");
+            doc.autoTable({ html: table });
+
+            // Xuất file PDF
+            doc.save("hoa_don.pdf");
+        }
+
+        // Xuất Excel
+        function exportToExcel() {
+            const table = document.getElementById("invoiceTable");
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Hóa Đơn" });
+            XLSX.writeFile(wb, "hoa_don.xlsx");
+        }
+
+        // Xuất Word
+        function exportToWord() {
+            let tableHTML = document.getElementById("invoiceTable").outerHTML;
+            let htmlContent = `
+                <html>
+                    <head><title>Hóa Đơn</title></head>
+                    <body>
+                        <h1>Hóa Đơn</h1>
+                        <p>Ngày: ${currentDate.toLocaleDateString('vi-VN')}</p>
+                        ${tableHTML}
+                    </body>
+                </html>
+            `;
+            
+            const blob = new Blob([htmlContent], { type: 'application/msword' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = "hoa_don.doc";
+            link.click();
+        }
+    </script>
+</body>
+</html>

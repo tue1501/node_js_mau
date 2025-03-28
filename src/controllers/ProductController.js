@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import twilio from 'twilio';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
+import axios from 'axios';
 import { fileURLToPath } from "url";
 import connection from '../config/database.js';
 import path from "path";
@@ -58,9 +59,9 @@ const sendOtp = async (req, res) => {
   
       // Gửi OTP qua SMS nếu có sdt
       if (sdt) {
-         // Định dạng số điện thoại với mã quốc gia +1 nếu cần
-        const to = sdt.startsWith('+1') ? sdt : '+1' + sdt;  
-        // Nội dung tin nhắn OTP
+        //  // Định dạng số điện thoại với mã quốc gia +1 nếu cần
+        // const to = sdt.startsWith('+1') ? sdt : '+1' + sdt;  
+        // // Nội dung tin nhắn OTP
         const messageBody = `Your verification code is: ${otp}. It will expire in 5 minutes.`;
         // Gửi OTP qua SMS
         const token = jwt.sign(
@@ -81,20 +82,52 @@ const sendOtp = async (req, res) => {
             to,
             token : token
         });
+         // Gửi OTP qua SMS bằng Textbelt
+        // const response = await axios.post('https://textbelt.com/text', {
+        //     phone: sdt,
+        //     message: messageBody,
+        //     key: 'aa4a32f6b36cbd769621e8e12fce6cd9a2c68c90ZAbwORflxiIM2reitIXMqfprf', // Đây là key mặc định của Textbelt cho dịch vụ miễn phí
+        // });
+
+        // // Kiểm tra phản hồi từ Textbelt
+        // if (response.data.success) {
+        //     return res.status(200).json({
+        //         success: true,
+        //         message: 'OTP sent successfully via SMS!',
+        //         sid: response.data.textId, // Bạn có thể lưu textId nếu cần
+        //         to,
+        //         token,
+        //     });
+        // }else {
+        //     return res.status(500).json({
+        //       success: false,
+        //       error: 'Failed to send SMS using Textbelt.',
+        //     });
+        //   }
         }
-    
         // Gửi OTP qua Gmail nếu có gmail
         if (gmail) {
+            // Lấy tệp HTML từ URL
+            const response = await axios.get('https://congthuc007.github.io/picturelinhtinh/');
+            let htmlContent = response.data;
+
+            // Thay thế {{otp_code}} trong tệp HTML bằng mã OTP
+            const personalizedHtml = htmlContent.replace('{{otp_code}}', otp);
+
+            // Tiêu đề email
             const subject = 'Mã OTP xác thực của bạn';
-            const text = `Mã xác thực của bạn là: ${otp}. Mã này sẽ hết hạn sau 5 phút.`;
-    
-            const result = await sendEmail({ to: gmail, subject, text });
-    
+
+            // Gửi email
+            const result = await sendEmail({
+                to: gmail,
+                html: personalizedHtml,  // Gửi email với nội dung HTML đã được thay thế OTP
+            });
+
             return res.status(200).json({
-            success: true,
-            message: 'OTP sent successfully via email!',
-            info: result,
-            token: token,
+                success: true,
+                message: 'OTP sent successfully via email!',
+                info: result,
+                token,
             });
         }
         } catch (error) {
@@ -954,7 +987,6 @@ const search = async (req, res) => {
       SELECT 
         sp.idSanPham,
         sp.tensp,
-        sp.mausac,
         sp.xuatxu,
         sp.gia,
         sp.tonkho,
