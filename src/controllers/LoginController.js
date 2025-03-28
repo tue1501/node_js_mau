@@ -128,7 +128,11 @@ const Register = async (req, res) => {
         if (matkhau !== confirmMatkhau) {
             return res.status(400).json({ message: 'Password confirmation does not match' });
         }
-
+        // Kiểm tra email đã tồn tại chưa
+        const [emailRows] = await connection.query('SELECT idKhachHang FROM khachhang WHERE gmail = ?', [email]);
+        if (emailRows.length > 0) {
+            return res.status(400).json({ message: 'Email is already in use' });
+        }
         // Kiểm tra số điện thoại đã tồn tại chưa
         const [rows] = await connection.query('SELECT idKhachHang FROM khachhang WHERE sdt = ?', [sdt]);
         if (rows.length > 0) {
