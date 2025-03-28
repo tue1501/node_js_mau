@@ -6,7 +6,7 @@ const orderbyid = async (req, res) => {
     try {
         // Lấy danh sách đơn hàng của khách hàng, bao gồm cả ghi chú
         const [orders] = await connection.execute(
-            `SELECT iddonhang, ghichu FROM donhang WHERE idKhachHang = ?`,
+            `SELECT iddonhang, ghichu, trangthai, ngaytao, ngaygiaohang, tongtien,tt_cod, tt_online FROM donhang WHERE idKhachHang = ?`,
             [id]
         );
 
@@ -24,7 +24,6 @@ const orderbyid = async (req, res) => {
                     p.xuatxu,
                     p.tonkho,
                     p.mota,
-                    dh.*,
                     -- Lấy ảnh từ bảng màu, nếu không có thì lấy ảnh từ bảng sản phẩm
                     COALESCE(mh.hinhanh, p.hinhanh) AS hinhanh
                 FROM chitietdonhang c
@@ -43,6 +42,12 @@ const orderbyid = async (req, res) => {
             // Thêm vào mảng kết quả
             orderDetails.push({
                 iddonhang: order.iddonhang,
+                trangthai: order.trangthai,
+                tt_cod: order.tt_cod,
+                ngaytao: order.ngaytao,
+                ngaygiaohang: order.ngaygiaohang,
+                tongtien: order.tongtien,
+                tt_online: order.tt_online,
                 ghichu: order.ghichu, // Lấy ghi chú từ bảng donhang
                 products: updatedProducts
             });
