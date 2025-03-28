@@ -103,14 +103,16 @@ const deleteorder = async (req, res) => {
         return res.status(500).json({ message: 'Error updating customer', error });
     }
 };
+
+
 const getAllOrders = async (req, res) => {
     try {
         // Truy vấn đơn hàng với trường ngày tạo (ngaytao) và ngày giao hàng (ngaygiaohang) trong khoảng thời gian từ fromDate đến toDate
         const [orders] = await connection.execute(
             `SELECT idDonhang, tenkh, sdtkh, ngaytao, ngaygiaohang, tongtien, ghichu, trangthai
-             FROM donhang`,
+            FROM donhang`,
         );
-
+        
         // Kiểm tra nếu không có đơn hàng nào
         if (orders.length === 0) {
             return res.status(404).json({ success: false, message: 'Không có đơn hàng nào trong khoảng thời gian này' });
@@ -125,7 +127,7 @@ const getAllOrders = async (req, res) => {
 
 const getOrderById = async (req, res) => {
     const { id } = req.params;
-
+    
     try {
         // Lấy thông tin đơn hàng theo ID
         const [orders] = await connection.execute(
@@ -135,39 +137,31 @@ const getOrderById = async (req, res) => {
             WHERE dh.iddonhang = ?`,
             [id]
         );
-
+        
         if (orders.length === 0) {
             return res.status(404).json({ message: 'Order not found!' });
         }
-
+        
         const order = orders[0];        // Lấy sản phẩm trong đơn hàng, đổi idSanPham thành idMau
         const [products] = await connection.execute(
             `SELECT 
-                p.idSanPham,
-                c.idMau,
-                c.sl,
-                p.tensp,
-                p.gia,
-                p.xuatxu,
-                p.tonkho,
-                p.mota,
-                c.*,
-                -- Lấy ảnh từ bảng màu, nếu không có thì lấy ảnh từ bảng sản phẩm
-                COALESCE(mh.hinhanh, p.hinhanh) AS hinhanh
+            p.idSanPham,
+            c.idMau,
+            c.sl,
+            p.tensp,
+            p.gia,
+            p.xuatxu,
+            p.tonkho,
+            p.mota,
+            c.*,
+            -- Lấy ảnh từ bảng màu, nếu không có thì lấy ảnh từ bảng sản phẩm
+            COALESCE(mh.hinhanh, p.hinhanh) AS hinhanh
             FROM chitietdonhang c
             LEFT JOIN sanpham_mau_hinhanh mh ON c.idMau = mh.id
             LEFT JOIN sanpham p ON mh.idSanPham = p.idSanPham
             WHERE c.idDonhang = ?`,
             [order.iddonhang]
         );
-
-        // // Cập nhật đường dẫn hình ảnh đầy đủ
-        // const updatedProducts = products.map(product => ({
-        //     ...product,
-        //     hinhanh: product.hinhanh 
-        // }));
-
-        // Trả về thông tin đơn hàng và sản phẩm
         return res.status(200).json({
             iddonhang: order.iddonhang,
             hoten: order.hoten,
@@ -204,11 +198,63 @@ const order = async (req, res) => {
         });
     }
 };
+const updateorder = async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body; // "increase" hoặc "decrease"
+
+    try {
+        if (!id || !status) {
+            return res.status(400).json({ message: 'Missing order ID or status' });
+        }
+
+        // Kiểm tra xem đơn hàng có tồn tại không
+        const [rows] = await connection.query(
+            'SELECT trangthai FROM donhang WHERE idDonHang = ?',
+            [id]
+        );
+
+        if (rows.length !== 1) {
+            return res.status(404).json({ message: 'Order not found!' });
+        }
+
+        let newTrangThai = rows[0].trangthai;
+
+        // Kiểm tra giới hạn trước khi cập nhật
+        if (status === "increase") {
+            if (newTrangThai >= 4) {
+                return res.status(400).json({ message: 'Order status cannot be greater than 4' });
+            }
+            newTrangThai += 1;
+        } else if (status === "decrease") {
+            if (newTrangThai <= 0) {
+                return res.status(400).json({ message: 'Order status cannot be less than 0' });
+            }
+            newTrangThai -= 1;
+        } else {
+            return res.status(400).json({ message: 'Invalid status value' });
+        }
+
+        // Cập nhật trạng thái trong database
+        const query = `UPDATE donhang SET trangthai = ? WHERE idDonHang = ?`;
+        const [result] = await connection.execute(query, [newTrangThai, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Order not found or update failed' });
+        }
+
+        return res.status(200).json({ message: 'Order updated successfully', newTrangThai });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Error updating order', error });
+    }
+};
+
 
 export default {
     orderbyid,
     deleteorder,
     getAllOrders,
     getOrderById,
-    order
+    order,
+    updateorder
 };
