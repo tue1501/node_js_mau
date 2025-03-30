@@ -92,4 +92,21 @@ const filterOrdersByDate = async (req, res) => {
     }
 };
 
-export default { fetchOrdersByStatus,filterOrdersByDate };
+const inforshop = async (req, res) => {
+    try {
+        const [rows] = await connection.query(
+            'SELECT * FROM cuahang '
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'không có thông tin cửa hàng' });
+        }
+        return res.status(200).json({
+            data: rows
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Lỗi máy chủ' });
+    }   
+}
+
+export default { fetchOrdersByStatus,filterOrdersByDate,inforshop };

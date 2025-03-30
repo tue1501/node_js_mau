@@ -6,6 +6,7 @@ const router = express.Router();
 const revenue = (app) => {
     router.post('/getRevenueByDateRange',RevenueController.fetchOrdersByStatus);
     router.post('/filterOrdersByDate',RevenueController.filterOrdersByDate);
+    router.get('/inforshop',RevenueController.inforshop);
     return app.use('/api', router);
 }
 

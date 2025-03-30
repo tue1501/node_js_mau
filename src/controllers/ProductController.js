@@ -273,7 +273,6 @@ const getAllproduct = async (req, res) => {
             idSanPham: row.idSanPham,
             idChiTietLoaiSanPham: row.idChiTietLoaiSanPham,
             tensp: row.tensp,
-            mausac: row.mausac,
             xuatxu: row.xuatxu,
             diemtb: row.diemtb,
             gia: row.gia,
@@ -617,8 +616,7 @@ const getProductsByDetailType = async (req, res) => {
                 c.idChiTietLoaiSanPham, 
                 c.tenchitiet, 
                 p.idSanPham, 
-                p.tensp, 
-                p.mausac, 
+                p.tensp,  
                 p.xuatxu, 
                 p.hinhanh, 
                 p.diemtb, 
@@ -643,7 +641,6 @@ const getProductsByDetailType = async (req, res) => {
             products: result.map(product => ({
                 idSanPham: product.idSanPham,
                 tensp: product.tensp,
-                mausac: product.mausac,
                 xuatxu: product.xuatxu,
                 hinhanh: product.hinhanh,
                 diemtb: product.diemtb,
@@ -994,19 +991,19 @@ const search = async (req, res) => {
         ctlsp.tenchitiet,
         lsp.tenloai,
         (CASE
-            WHEN sp.tensp LIKE ? COLLATE utf8mb4_bin THEN 3
-            WHEN sp.mota LIKE ? COLLATE utf8mb4_bin THEN 2
+            WHEN LOWER(sp.tensp) LIKE LOWER(?) COLLATE utf8mb4_bin THEN 3
+            WHEN LOWER(sp.mota) LIKE LOWER(?) COLLATE utf8mb4_bin THEN 2
             ELSE 1
         END) AS relevance_score
-      FROM sanpham sp
-      JOIN chitietloaisanpham ctlsp ON sp.idChiTietLoaiSanPham = ctlsp.idChiTietLoaiSanPham
-      JOIN loaisanpham lsp ON ctlsp.idLoaiSanPham = lsp.idLoaiSanPham
-      WHERE 
-        sp.tensp LIKE ? COLLATE utf8mb4_bin
-        OR sp.mota LIKE ? COLLATE utf8mb4_bin
-        OR ctlsp.tenchitiet LIKE ? COLLATE utf8mb4_bin
-        OR lsp.tenloai LIKE ? COLLATE utf8mb4_bin
-      ORDER BY relevance_score DESC;
+        FROM sanpham sp
+        JOIN chitietloaisanpham ctlsp ON sp.idChiTietLoaiSanPham = ctlsp.idChiTietLoaiSanPham
+        JOIN loaisanpham lsp ON ctlsp.idLoaiSanPham = lsp.idLoaiSanPham
+        WHERE 
+        LOWER(sp.tensp) LIKE LOWER(?) COLLATE utf8mb4_bin
+        OR LOWER(sp.mota) LIKE LOWER(?) COLLATE utf8mb4_bin
+        OR LOWER(ctlsp.tenchitiet) LIKE LOWER(?) COLLATE utf8mb4_bin
+        OR LOWER(lsp.tenloai) LIKE LOWER(?) COLLATE utf8mb4_bin
+        ORDER BY relevance_score DESC;
     `;
 
     // Tìm kiếm từng từ và tổng hợp kết quả
