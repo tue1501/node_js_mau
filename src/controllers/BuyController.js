@@ -8,7 +8,7 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
     var secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
     var partnerCode = 'MOMO';
     var redirectUrl = 'http://localhost:8080/api/products';
-    var ipnUrl = 'http://localhost:8080/api/momo-ipn'; // Thay thế URL webhook cũ
+    var ipnUrl = 'https://nodejsmau-production.up.railway.app/api/momo-ipn'; // Thay thế URL webhook cũ
     var requestType = "payWithMethod";
     var originalOrderId = orderId; // Lưu lại orderId gốc trước khi thay đổi
     var orderInfo = orderDescription || 'pay with MoMo';  // Sử dụng mô tả đơn hàng truyền vào
@@ -55,12 +55,6 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
     
     try {
         let result = await axios(options);
-        // // Lưu orderId gốc vào cơ sở dữ liệu hoặc hệ thống để có thể truy vấn lại khi cần
-        // await connection.execute(
-        //     'INSERT INTO donhang (idDonhang, orderIdGoc) VALUES (?, ?)',
-        //     [orderId, originalOrderId]  // Lưu lại originalOrderId
-        // );
-
         return res.status(200).json(result.data);
     } catch (error) {
         console.error("Error occurred:", error); // In lỗi ra console để dễ dàng kiểm tra
@@ -77,18 +71,18 @@ const handleMomoIPN = async (req, res) => {
         const { orderId, requestId, resultCode } = req.body;
         
         console.log(orderId, requestId, resultCode); // Ghi log để kiểm tra dữ liệu nhận được từ MoMo
-
+        
+        const originalOrderId = extraData; // Lấy orderId gốc từ extraData
+        console.log(originalOrderId); // Ghi log để kiểm tra orderId gốc
         const [rows] = await connection.execute(
-            'SELECT orderIdGoc FROM donhang WHERE idDonhang = ?',
-            [orderId]
+            'SELECT idDonhang FROM donhang WHERE idDonhang = ?',
+            [extraData]
         )
         if (rows.length > 0) {
-            const originalOrderId = rows[0].orderIdGoc;
-
             if (resultCode === 0) { // resultCode = 0 nghĩa là thanh toán thành công
                 await connection.execute(
                     'UPDATE donhang SET tt_online = 1 WHERE idDonhang = ?',
-                    [orderId]
+                    [originalOrderId]
                 );
                 return res.status(200).json({ message: "Payment successful, order updated!" });
             } else {
