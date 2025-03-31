@@ -68,12 +68,9 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
 
 const handleMomoIPN = async (req, res) => {
     try {
-        const { orderId, requestId, resultCode } = req.body;
+        const { extraData, requestId, resultCode } = req.body;
         
-        console.log(orderId, requestId, resultCode); // Ghi log để kiểm tra dữ liệu nhận được từ MoMo
-        
-        const originalOrderId = extraData; // Lấy orderId gốc từ extraData
-        console.log(originalOrderId); // Ghi log để kiểm tra orderId gốc
+        console.log(extraData, requestId, resultCode); // Ghi log để kiểm tra dữ liệu nhận được từ MoMo
         const [rows] = await connection.execute(
             'SELECT idDonhang FROM donhang WHERE idDonhang = ?',
             [extraData]
@@ -82,7 +79,7 @@ const handleMomoIPN = async (req, res) => {
             if (resultCode === 0) { // resultCode = 0 nghĩa là thanh toán thành công
                 await connection.execute(
                     'UPDATE donhang SET tt_online = 1 WHERE idDonhang = ?',
-                    [originalOrderId]
+                    [extraData]
                 );
                 return res.status(200).json({ message: "Payment successful, order updated!" });
             } else {
