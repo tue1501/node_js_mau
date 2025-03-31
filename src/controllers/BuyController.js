@@ -8,15 +8,17 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
     var secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
     var partnerCode = 'MOMO';
     var redirectUrl = 'http://localhost:8080/api/products';
-    var ipnUrl = 'https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b';
+    var ipnUrl = 'http://localhost:8080/api/momo-ipn'; // Thay thế URL webhook cũ
     var requestType = "payWithMethod";
+    var originalOrderId = orderId; // Lưu lại orderId gốc trước khi thay đổi
     var orderInfo = orderDescription || 'pay with MoMo';  // Sử dụng mô tả đơn hàng truyền vào
     var amount = totalAmount.toString();  // Chuyển tổng tiền thành chuỗi
     var partnerName = "Test";
     var storeId = "MomoTestStore";
-    var orderId = partnerCode + new Date().getTime();  // Ví dụ: MOMO1553512345678
-    var requestId = orderId;  // Sử dụng orderId làm requestId
-    var extraData = '';
+    var orderId = new Date().getTime() + orderId  // Tạo orderId mới mỗi lần thanh toán lại
+    console.log(orderId);
+    var requestId = orderId; // requestId cũng mới
+    var extraData = originalOrderId; // Lưu `orderId` gốc vào extraData
     var orderGroupId = '';
     var autoCapture = true;
     var lang = 'vi';
@@ -50,23 +52,61 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
         },
         data: requestBody
     }
-
+    
     try {
         let result = await axios(options);
+        // // Lưu orderId gốc vào cơ sở dữ liệu hoặc hệ thống để có thể truy vấn lại khi cần
+        // await connection.execute(
+        //     'INSERT INTO donhang (idDonhang, orderIdGoc) VALUES (?, ?)',
+        //     [orderId, originalOrderId]  // Lưu lại originalOrderId
+        // );
+
         return res.status(200).json(result.data);
     } catch (error) {
+        console.error("Error occurred:", error); // In lỗi ra console để dễ dàng kiểm tra
         return res.status(500).json({
             statuscode: 500,
-            message: "server err"
+            message: "server err",
+            error: error.message // In chi tiết lỗi ra để dễ dàng debug
         });
     }
 };
 
-// Hàm Pay để xử lý đơn hàng và phương thức thanh toán
+const handleMomoIPN = async (req, res) => {
+    try {
+        const { orderId, requestId, resultCode } = req.body;
+        
+        console.log(orderId, requestId, resultCode); // Ghi log để kiểm tra dữ liệu nhận được từ MoMo
+
+        const [rows] = await connection.execute(
+            'SELECT orderIdGoc FROM donhang WHERE idDonhang = ?',
+            [orderId]
+        )
+        if (rows.length > 0) {
+            const originalOrderId = rows[0].orderIdGoc;
+
+            if (resultCode === 0) { // resultCode = 0 nghĩa là thanh toán thành công
+                await connection.execute(
+                    'UPDATE donhang SET tt_online = 1 WHERE idDonhang = ?',
+                    [orderId]
+                );
+                return res.status(200).json({ message: "Payment successful, order updated!" });
+            } else {
+                return res.status(400).json({ message: "Payment failed or cancelled!" });
+            }
+        } else {
+            return res.status(400).json({ message: "Order not found!" });
+        }
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error', error });
+    }
+};
+
 const Pay = async (req, res) => {
     const { idMau, note, iddiscount, quantity, paymentMethod } = req.body;
     const idkhachhang = req.user.id; // Lấy ID từ token đã giải mã
-
+    
     try {
         // Kiểm tra mảng idMau và quantity
         if (!Array.isArray(idMau) || idMau.length === 0 || !Array.isArray(quantity) || quantity.length !== idMau.length) {
@@ -171,7 +211,7 @@ const Pay = async (req, res) => {
         // Tạo đơn hàng
         const now = new Date();
         const ttCod = paymentMethod === 'COD' ? 1 : 0;
-        const ttOnline = paymentMethod === 'VNPay' ? 1 : 0;
+        const ttOnline = paymentMethod === 'MoMo' ? 0 : 0;
 
         const [orderResult] = await connection.query(
             'INSERT INTO donhang (idkhachhang, tenkh, sdtkh, ngaytao, ngaygiaohang, ghichu, idGiamGia, tt_cod, noinhan, tt_online, trangthai, tongtien) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, 0, ?)',
@@ -237,8 +277,33 @@ const Pay = async (req, res) => {
         return res.status(500).json({ message: 'Server error', error });
     }
 };
+// Hàm xử lý thanh toán MoMo
+const thanhtoanmomo = async (req, res) => {
+    try {
+        const { iddonhang } = req.body;
+        const [order] = await connection.execute(
+            'SELECT * FROM donhang WHERE idDonhang = ?',
+            [iddonhang]
+        );
+        if (order.length === 0) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+        const orderId = order[0].idDonhang;
+        const totalAmount = order[0].tongtien;
+        const orderDescription = order[0].ghichu || 'Thanh toán đơn hàng';  // Mô tả đơn hàng
+        // Gọi hàm thanh toán MoMo
+        return payment(req, res, orderId, totalAmount, orderDescription);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+
 
 export default {
     Pay,
-    payment
+    payment,
+    thanhtoanmomo,
+    handleMomoIPN
 };
