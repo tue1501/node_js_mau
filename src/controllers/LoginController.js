@@ -167,13 +167,10 @@ const Register = async (req, res) => {
 const informations = async (req, res) => {
     try {
         const userId = req.user.id; // Lấy ID từ token đã giải mã
-        // Truy vấn cơ sở dữ liệu để lấy thông tin người dùng dựa trên userId từ token
         const [rows] = await connection.query(
             'SELECT idKhachHang, hoten, sdt, gmail,diachi FROM khachhang WHERE idKhachHang = ?', 
             [userId]
         );
-
-        // Kiểm tra nếu không tìm thấy người dùng
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Không tìm thấy người dùng' });
         }
@@ -190,70 +187,50 @@ const informations = async (req, res) => {
 
 const addaddress = async (req, res) => {
         const id = req.user.id; // Lấy ID từ token đã giải mã
-        const { diachi } = req.body;
+        const { diachi ,hoten } = req.body;
         try {
         // Truy vấn cơ sở dữ liệu để lấy thông tin người dùng dựa trên userId từ token
-       
-
-        if (!diachi) {
-            return res.status(400).json({ message: 'No fields to update' });
+        if (!id) {
+            return res.status(400).json({ message: 'Customer ID is required' });
         }
-
-        // Cập nhật thông tin khách hàng
-        const query = `
+        if (hoten) {
+            const query = `
+            UPDATE khachhang
+            SET
+                hoten = COALESCE(?, hoten)   
+            WHERE idKhachHang = ?
+            `;
+            const [result] = await connection.execute(query, [
+                hoten || null,  
+                id,
+            ]);
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: 'Customer not found' });
+            }
+            return res.status(200).json({ message: 'Customer updated successfully' });
+        }
+        if (diachi) {
+            const query = `
             UPDATE khachhang 
             SET 
-                diachi = COALESCE(?, diachi)
+                diachi = COALESCE(?, diachi),
             WHERE idKhachHang = ?
-        `;
-        const [result] = await connection.execute(query, [
-            diachi || null,
-            id,
-        ]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'Customer not found' });
+            `;
+            const [result] = await connection.execute(query, [
+                diachi || null,
+                id,
+            ]);
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: 'Customer not found' });
+            }
+            return res.status(200).json({ message: 'Customer updated successfully' });
         }
-
-        return res.status(200).json({ message: 'Customer updated successfully' });
+        return res.status(200).json({ message: 'Error updating customer' });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Error updating customer', error });
     }
 };
-
-// const password = async (req, res) => {
-//     try {
-//         const { id } = req.params;
-//         const { matkhau } = req.body; // Lấy thông tin tự body
-//         const [rows] = await connection.query(
-//             'SELECT * FROM khachhang WHERE idKhachHang = ?',
-//             [id]
-//         );
-        
-//         if (rows.length === 0) {
-//             return res.status(404).json({ message: 'User not found!' });
-//         }
-
-//         const user = rows[0];
-//         const isMatch = await bcrypt.compare(matkhau, user.matkhau);
-
-//         const passwordRegex = /^.{8,}$/;  // Mật khẩu phải có ít nhất 8 ký tự
-//         if (!passwordRegex.test(matkhau)) {
-//             return res.status(400).json({ message: "Password must be at least 8 characters long." });        
-//         }
-
-//         if (!isMatch) {
-//             return res.status(401).json({ message: 'wrong password!' });
-//         }
-
-//         return res.status(200).json({ message: 'password correct!'});
-//     } catch (error) {
-//         console.error('Error password :', error);
-//         return res.status(500).json({ message: 'password error' });
-//     }
-// }; 
-
 
 const resertpass = async (req, res) => {
     const id = req.user.id; // Lấy ID từ token đã giải mã\

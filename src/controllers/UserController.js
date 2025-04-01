@@ -46,8 +46,25 @@ const searchByPhone = async (req, res) => {
 const updateUser = async (req, res) => {
     const { id } = req.params;
     const { hoten, sdt, email, diachi } = req.body;
-
     try {
+        // Kiểm tra xem người dùng có tồn tại không
+        const [user] = await connection.query('SELECT * FROM khachhang WHERE idKhachHang = ?', [id]);
+        if (user.length === 0) {
+            return res.status(404).json({ message: 'User not found!' });
+        }
+        // kiem tra xem số điện thoại đã tồn tại chưa
+        const [existingUser] = await connection.query('SELECT * FROM khachhang WHERE sdt = ? AND idKhachHang != ?', [sdt, id]);
+        if (existingUser.length > 0) {
+            return res.status(400).json({ message: 'Phone number already exists!' });
+        }
+        // kiem tra xem email đã tồn tại chưa
+        const [existingEmail] = await connection.query('SELECT * FROM khachhang WHERE gmail = ? AND idKhachHang != ?', [email, id]);
+        if (existingEmail.length > 0) {
+            return res.status(400).json({ message: 'Email already exists!' });
+        }
+        // Cập nhật thông tin người dùng
+        // Kiểm tra xem có trường nào không được truyền vào không
+        
         const [result] = await connection.execute(
             `UPDATE khachhang SET hoten = ?, sdt = ?, gmail = ?, diachi = ? WHERE idKhachHang = ?`,
             [hoten, sdt, email, diachi, id]
