@@ -7,7 +7,7 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
     var accessKey = 'F8BBA842ECF85';
     var secretKey = 'K951B6PE1waDMi640xX08PD3vg6EkVlz';
     var partnerCode = 'MOMO';
-    var redirectUrl = 'http://localhost:8080/api/products';
+    var redirectUrl = 'http://localhost:8080/api/redirectUrl';
     var ipnUrl = 'https://nodejsmau-production.up.railway.app/api/momo-ipn'; // Thay thế URL webhook cũ
     var requestType = "payWithMethod";
     var originalOrderId = orderId; // Lưu lại orderId gốc trước khi thay đổi
@@ -55,7 +55,19 @@ const payment = async (req, res, orderId, totalAmount, orderDescription) => {
     
     try {
         let result = await axios(options);
-        return res.status(200).json(result.data);
+        // In thêm thông tin đơn hàng vào bảng donhang
+        console.log(extraData);
+        const [order] = await connection.execute(
+            'SELECT * FROM donhang WHERE idDonhang = ?',
+            [extraData]
+        );  
+        const orderInfo = order[0];
+        // Kiểm tra đơn hàng có tồn tại không
+        return res.status(200).json({
+            message: "Tạo thanh toán thành công",
+            data: orderInfo, // Thông tin đơn hàng từ database
+            momo : result.data ,
+        });
     } catch (error) {
         console.error("Error occurred:", error); // In lỗi ra console để dễ dàng kiểm tra
         return res.status(500).json({
@@ -211,6 +223,16 @@ const Pay = async (req, res) => {
 
         const orderId = orderResult.insertId;
 
+        // Lấy thông tin đơn hàng vừa tạo
+        const [newOrder] = await connection.execute(
+            'SELECT * FROM donhang WHERE idDonhang = ?',
+            [orderId]
+        );
+        const orderInfo = newOrder[0];
+        if (newOrder.length === 0) {
+            return res.status(404).json({ message: 'Failed to retrieve the newly created order' });
+        }
+
         // Lưu thông tin chi tiết đơn hàng
         const detailsPromises = idMau.map((colorImageId, index) => {
             const productQuantity = quantity[index];
@@ -253,6 +275,7 @@ const Pay = async (req, res) => {
         } else {
             return res.status(200).json({
                 message: 'Order placed successfully',
+                data: orderInfo,
                 order: {
                     orderId,
                     customerName,
@@ -289,6 +312,19 @@ const thanhtoanmomo = async (req, res) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
+const redirectUrl = async (req, res) => {
+    try {
+        const { iddonhang } = req.body;
+        const [order] = await connection.execute(
+            'SELECT * FROM donhang WHERE idDonhang = ?',
+            [iddonhang]
+        );
+        return res.status(200).json(order[0]);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+}
 
 
 
@@ -296,5 +332,6 @@ export default {
     Pay,
     payment,
     thanhtoanmomo,
-    handleMomoIPN
+    handleMomoIPN,
+    redirectUrl
 };
