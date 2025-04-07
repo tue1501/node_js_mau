@@ -1,15 +1,17 @@
 import connection from '../config/database.js'
 import dotenv from 'dotenv';
+import sendNotification from '../middleware/notification.js';
 dotenv.config();
 
 const repcomment = async (req, res) => {
     try {
         // Lấy id từ URL params
         const { id } = req.params;
-        const idQtv = req.admin.id;
+        const idQtv = req.admin.id; // Giả sử req.admin được gán từ middleware
         const { traloi } = req.body;
 
         const ngaytraloi = new Date().toISOString().slice(0, 19).replace('T', ' '); // Định dạng YYYY-MM-DD HH:MM:SS
+
         // Kiểm tra dữ liệu đầu vào
         if (!id || !idQtv || !traloi) {
             return res.status(400).json({ message: 'Thiếu id, idQtv hoặc nội dung trả lời!' });
@@ -28,12 +30,55 @@ const repcomment = async (req, res) => {
             return res.status(404).json({ message: 'Không tìm thấy đánh giá để trả lời!' });
         }
 
-        // Lấy tất cả các trường trong bảng danhgia sau khi cập nhật
+        // Lấy tất cả các trường trong bảng danhgia sau khi cập nhật, bao gồm idKhachHang
         const [rows] = await connection.execute('SELECT * FROM danhgia WHERE id = ?', [id]);
+        const danhGia = rows[0];
+
+        // Lấy token từ bảng khachhang dựa trên idKhachHang
+        const [tokenRows] = await connection.execute(
+            'SELECT token FROM khachhang WHERE idKhachHang = ? AND token IS NOT NULL',
+            [danhGia.idKhachHang]
+        );
+
+        // Tạo danh sách token từ giá trị trong DB
+        let allTokens = [];
+        if (tokenRows.length > 0 && tokenRows[0].token) {
+            const tokenData = tokenRows[0].token;
+            if (typeof tokenData === 'string') {
+                try {
+                    // Thử parse chuỗi JSON
+                    const parsedTokens = JSON.parse(tokenData);
+                    if (Array.isArray(parsedTokens)) {
+                        allTokens = allTokens.concat(parsedTokens);
+                    } else {
+                        console.warn(`Token không phải mảng JSON: ${tokenData}`);
+                    }
+                } catch (err) {
+                    console.error(`Lỗi khi parse token: ${tokenData}`, err);
+                    // Nếu không phải JSON, tách bằng dấu phẩy
+                    const splitTokens = tokenData.split(',').map(t => t.trim());
+                    allTokens = allTokens.concat(splitTokens);
+                }
+            } else if (Array.isArray(tokenData)) {
+                // Nếu driver đã parse thành mảng
+                allTokens = allTokens.concat(tokenData);
+            }
+        }
+
+        // Gửi thông báo từng cái một nếu có token
+        if (allTokens.length > 0) {
+            for (const token of allTokens) {
+                await sendNotification({
+                    title: 'Petland',
+                    body: `Đánh giá của bạn đã được trả lời: ${traloi}`,
+                    token: token
+                });
+            }
+        }
 
         return res.status(200).json({
             message: 'Phản hồi đã được gửi thành công!',
-            data: rows[0] // Trả về bản ghi vừa được cập nhật
+            data: danhGia // Trả về bản ghi vừa được cập nhật
         });
     } catch (error) {
         console.error('Lỗi khi trả lời đánh giá:', error);
@@ -41,5 +86,4 @@ const repcomment = async (req, res) => {
     }
 };
 
-
-export default { repcomment }
+export default { repcomment };
