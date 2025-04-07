@@ -1,8 +1,7 @@
 import connection from '../config/database.js'
-import jwt from 'jsonwebtoken';
+import sendNotification from '../middleware/notification.js';
 const orderbyid = async (req, res) => {
     const id = req.user.id;
-
     try {
         // Lấy danh sách đơn hàng của khách hàng, bao gồm cả ghi chú
         const [orders] = await connection.execute(
@@ -24,6 +23,8 @@ const orderbyid = async (req, res) => {
                     p.xuatxu,
                     p.tonkho,
                     p.mota,
+                    c.iddanhgia,
+                    mh.tenmau,
                     -- Lấy ảnh từ bảng màu, nếu không có thì lấy ảnh từ bảng sản phẩm
                     COALESCE(mh.hinhanh, p.hinhanh) AS hinhanh
                 FROM chitietdonhang c
@@ -241,7 +242,11 @@ const updateorder = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Order not found or update failed' });
         }
-
+        const send = await sendNotification({
+            title: 'Petland',
+            body: `Đơn hàng của bạn đã được cập nhật trang thái`,
+            token: `ExponentPushToken[soy2kbGJONSzlZBnkTJJ3T]`, // Token từ body request
+        });
         return res.status(200).json({ message: 'Order updated successfully', newTrangThai });
     } catch (error) {
         console.error(error);

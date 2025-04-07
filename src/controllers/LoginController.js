@@ -477,7 +477,70 @@ const addAdmin = async (req, res) => {
     }
 };
 
+const addtoken = async (req, res) => {
+    try {
+        const { token } = req.body; // Lấy token từ body
+        const userId = req.user.id; // Lấy ID từ token đã giải mã
+
+        // Kiểm tra dữ liệu đầu vào
+        if (!token) {
+            return res.status(400).json({ message: 'Token là bắt buộc!' });
+        }
+
+        // Kiểm tra xem token đã tồn tại trong DB chưa
+        const [existingToken] = await connection.execute(
+            'SELECT token FROM khachhang WHERE idKhachHang = ?',
+            [userId]
+        );
+
+        let tokenArray = [];
+
+        if (existingToken.length > 0 && existingToken[0].token) {
+            // Xử lý dữ liệu token từ DB
+            if (typeof existingToken[0].token === 'string') {
+                // Nếu là chuỗi, parse thành mảng
+                try {
+                    tokenArray = JSON.parse(existingToken[0].token);
+                } catch (err) {
+                    console.error('Lỗi khi parse token array:', err);
+                    tokenArray = [];
+                }
+            } else if (Array.isArray(existingToken[0].token)) {
+                // Nếu đã là mảng (do DB tự parse), sử dụng trực tiếp
+                tokenArray = existingToken[0].token;
+            }
+
+            // Đảm bảo tokenArray là một mảng
+            if (!Array.isArray(tokenArray)) {
+                tokenArray = [];
+            }
+
+            // Kiểm tra xem token đã tồn tại trong mảng chưa
+            if (tokenArray.includes(token)) {
+                return res.status(400).json({ message: 'Token này đã tồn tại!' });
+            }
+
+            // Thêm token mới vào mảng
+            tokenArray.push(token);
+        } else {
+            // Nếu chưa có token nào, khởi tạo mảng mới với token
+            tokenArray = [token];
+        }
+
+        // Cập nhật token vào cơ sở dữ liệu dưới dạng chuỗi JSON
+        await connection.execute(
+            'UPDATE khachhang SET token = ? WHERE idKhachHang = ?',
+            [JSON.stringify(tokenArray), userId]
+        );
+
+        return res.status(201).json({ message: 'Token đã được thêm thành công!' });
+    } catch (error) {
+        console.error('Lỗi khi thêm token:', error);
+        return res.status(500).json({ message: 'Lỗi hệ thống khi thêm token!', error: error.message });
+    }
+};
+
 // Xuất khẩu hàm getAllUsers
 export default { 
-    Register,Login,informations,addaddress,resertpass,adddiscount,discountbyid,logout,Loginelenew,LoginQtv,addAdmin
+    Register,Login,informations,addaddress,resertpass,adddiscount,discountbyid,logout,Loginelenew,LoginQtv,addAdmin,addtoken
 };

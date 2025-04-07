@@ -82,28 +82,6 @@ const sendOtp = async (req, res) => {
             to,
             token : token
         });
-         // Gửi OTP qua SMS bằng Textbelt
-        // const response = await axios.post('https://textbelt.com/text', {
-        //     phone: sdt,
-        //     message: messageBody,
-        //     key: 'aa4a32f6b36cbd769621e8e12fce6cd9a2c68c90ZAbwORflxiIM2reitIXMqfprf', // Đây là key mặc định của Textbelt cho dịch vụ miễn phí
-        // });
-
-        // // Kiểm tra phản hồi từ Textbelt
-        // if (response.data.success) {
-        //     return res.status(200).json({
-        //         success: true,
-        //         message: 'OTP sent successfully via SMS!',
-        //         sid: response.data.textId, // Bạn có thể lưu textId nếu cần
-        //         to,
-        //         token,
-        //     });
-        // }else {
-        //     return res.status(500).json({
-        //       success: false,
-        //       error: 'Failed to send SMS using Textbelt.',
-        //     });
-        //   }
         }
         // Gửi OTP qua Gmail nếu có gmail
         if (gmail) {
@@ -953,87 +931,88 @@ const synonymsFilePath = path.join(__dirname, '../config/synonyms.json');
 
 // Hàm tìm kiếm sản phẩm
 const search = async (req, res) => {
-  try {
-    const { query } = req.body;
-
+    try {
+        const { query } = req.body;
     if (!query || query.trim() === "") {
-      return res.status(400).json({ message: "Vui lòng nhập từ khóa tìm kiếm" });
+        return res.status(400).json({ message: "Vui lòng nhập từ khóa tìm kiếm" });
     }
 
     // Tách từng từ trong query
     const queryTerms = query.trim().toLowerCase().split(' ');
-    console.log("Original query terms:", queryTerms);
 
     // Đọc file synonyms.json
     let synonymsData = {};
     try {
-      const data = await fs.readFile(synonymsFilePath, 'utf8');
-      synonymsData = JSON.parse(data);
+        const data = await fs.readFile(synonymsFilePath, 'utf8');
+        synonymsData = JSON.parse(data);
     } catch (err) {
-      console.error("Error reading synonyms file:", err);
+        console.error("Error reading synonyms file:", err);
     }
 
     // Ánh xạ từ đồng nghĩa cho từng từ
-    const searchTerms = queryTerms.map(term => {
-      return synonymsData[term] || term; // Nếu có từ đồng nghĩa thì dùng, không thì giữ nguyên
+    const searchTerms = queryTerms.flatMap(term => {
+        const synonym = synonymsData[term];
+        return Array.isArray(synonym) ? synonym : [synonym || term];
     });
-    console.log("Search terms after synonym:", searchTerms);
 
-    // Query SQL với collation accent-sensitive
+    // SQL Query có xử lý relevance và ảnh
     const sqlQuery = `
-      SELECT 
-        sp.idSanPham,
-        sp.tensp,
-        sp.xuatxu,
-        sp.gia,
-        sp.tonkho,
-        sp.mota,
-        ctlsp.tenchitiet,
-        lsp.tenloai,
-        (CASE
-            WHEN LOWER(sp.tensp) LIKE LOWER(?) COLLATE utf8mb4_bin THEN 3
-            WHEN LOWER(sp.mota) LIKE LOWER(?) COLLATE utf8mb4_bin THEN 2
-            ELSE 1
-        END) AS relevance_score
+        SELECT 
+            sp.idSanPham,
+            sp.tensp,
+            sp.xuatxu,
+            sp.gia,
+            sp.tonkho,
+            sp.mota,
+            ctlsp.tenchitiet,
+            lsp.tenloai,
+            COALESCE(mh.hinhanh, sp.hinhanh) AS hinhanh,
+            (CASE
+                WHEN LOWER(sp.tensp) LIKE LOWER(?) COLLATE utf8mb4_bin THEN 3
+                WHEN LOWER(sp.mota) LIKE LOWER(?) COLLATE utf8mb4_bin THEN 2
+                ELSE 1
+            END) AS relevance_score
         FROM sanpham sp
         JOIN chitietloaisanpham ctlsp ON sp.idChiTietLoaiSanPham = ctlsp.idChiTietLoaiSanPham
         JOIN loaisanpham lsp ON ctlsp.idLoaiSanPham = lsp.idLoaiSanPham
+        LEFT JOIN sanpham_mau_hinhanh mh ON sp.idSanPham = mh.idSanPham
         WHERE 
-        LOWER(sp.tensp) LIKE LOWER(?) COLLATE utf8mb4_bin
-        OR LOWER(sp.mota) LIKE LOWER(?) COLLATE utf8mb4_bin
-        OR LOWER(ctlsp.tenchitiet) LIKE LOWER(?) COLLATE utf8mb4_bin
-        OR LOWER(lsp.tenloai) LIKE LOWER(?) COLLATE utf8mb4_bin
+            LOWER(sp.tensp) LIKE LOWER(?) COLLATE utf8mb4_bin
+            OR LOWER(sp.mota) LIKE LOWER(?) COLLATE utf8mb4_bin
+            OR LOWER(ctlsp.tenchitiet) LIKE LOWER(?) COLLATE utf8mb4_bin
+            OR LOWER(lsp.tenloai) LIKE LOWER(?) COLLATE utf8mb4_bin
         ORDER BY relevance_score DESC;
     `;
 
-    // Tìm kiếm từng từ và tổng hợp kết quả
     let allResults = [];
+
     for (const term of searchTerms) {
-      const likeTerm = `%${term}%`;
-      const [results] = await connection.execute(sqlQuery, [
-        likeTerm,
-        likeTerm,
-        likeTerm,
-        likeTerm,
-        likeTerm,
-        likeTerm,
-      ]);
-      allResults = allResults.concat(results); // Gộp kết quả
+        const likeTerm = `%${term}%`;
+        const [results] = await connection.execute(sqlQuery, [
+            likeTerm,
+            likeTerm,
+            likeTerm,
+            likeTerm,
+            likeTerm,
+            likeTerm
+    ]);
+    allResults = allResults.concat(results);
     }
 
-    // Loại bỏ kết quả trùng lặp (dựa trên idSanPham)
+    // Loại bỏ kết quả trùng lặp theo idSanPham
     const uniqueResults = Array.from(
-      new Map(allResults.map(item => [item.idSanPham, item])).values()
+        new Map(allResults.map(item => [item.idSanPham, item])).values()
     );
 
     if (uniqueResults.length === 0) {
-      return res.status(200).json({ message: "Không tìm thấy sản phẩm nào", results: [] });
+        return res.status(200).json({ message: "Không tìm thấy sản phẩm nào", results: [] });
     }
-    return res.status(200).json({ results: uniqueResults });
-  } catch (error) {
+
+        return res.status(200).json({ results: uniqueResults });
+} catch (error) {
     console.error("Error during search:", error);
     return res.status(500).json({ message: "Đã có lỗi xảy ra trong quá trình tìm kiếm" });
-  }
+}
 };
 
 // Xuất khẩu hàm getAllUsers

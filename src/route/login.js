@@ -5,9 +5,6 @@ import authenticateJWTadmin from '../middleware/authenticatead.js';
 import checkSuperAdmin from '../middleware/checkSuperAdmin.js';
 
 const router = express.Router()
-
-
-
 const setupRoutes = (app) => {
 
     router.post('/register', LoginController.Register);
@@ -35,6 +32,8 @@ const setupRoutes = (app) => {
     router.get('/logout', authenticateJWT, LoginController.logout);
 
     router.post('/add-admin',authenticateJWTadmin,checkSuperAdmin,LoginController.addAdmin);
+
+    router.post('/addtoken',authenticateJWT,LoginController.addtoken);
 
     return app.use('/api', router);
 }
