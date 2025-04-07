@@ -8,9 +8,9 @@ const router = express.Router();
 const discount = (app) => {
     router.get('/vouchers',authenticateJWTadmin, DiscountController.getAllVouchers);
     router.get('/vouchers/:id', DiscountController.getVoucherById);
-    router.post('/vouchers', DiscountController.createVoucher);
-    router.put('/vouchers/:id', DiscountController.updateVoucher);
-    router.delete('/vouchers/:id', DiscountController.deleteVoucher);
+    router.post('/vouchers', authenticateJWTadmin,DiscountController.createVoucher);
+    router.put('/vouchers/:id', authenticateJWTadmin,DiscountController.updateVoucher);
+    router.delete('/vouchers/:id', authenticateJWTadmin,DiscountController.deleteVoucher);
     return app.use('/api', router);
 }
 

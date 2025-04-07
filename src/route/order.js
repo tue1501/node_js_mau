@@ -10,7 +10,7 @@ const OrderRoutes = (app) => {
     router.post('/deleteorder',authenticateJWT, OrderController.deleteorder);
 
     // Route to get all orders
-    router.get('/ordersall' , OrderController.getAllOrders);
+    router.get('/ordersall' , authenticateJWTadmin,OrderController.getAllOrders);
 
     // Route to get order details by order ID
     router.get('/orders/:id', OrderController.getOrderById);

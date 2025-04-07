@@ -285,8 +285,8 @@ const resertpass = async (req, res) => {
 
 
 const adddiscount = async (req, res) => {
-    const id = req.user.id; // Lấy ID từ token đã giải mã\
-    const { discountcode } = req.body; // ID của mã giảm giá được gửi từ client
+    const id = req.user.id; // Lấy ID từ token đã giải mã
+    const { discountcode } = req.body; // Tên mã giảm giá được gửi từ client
 
     try {
         // Kiểm tra nếu không có ID khách hàng
@@ -296,7 +296,7 @@ const adddiscount = async (req, res) => {
 
         // Kiểm tra nếu không có mã giảm giá
         if (!discountcode) {
-            return res.status(400).json({ message: 'Discount ID is required' });
+            return res.status(400).json({ message: 'Discount code is required' });
         }
 
         // Kiểm tra khách hàng có tồn tại không
@@ -309,9 +309,9 @@ const adddiscount = async (req, res) => {
             return res.status(404).json({ message: 'Customer not found' });
         }
 
-        // Kiểm tra mã giảm giá có tồn tại không
+        // Kiểm tra mã giảm giá có tồn tại không và lấy soluong
         const [discount] = await connection.execute(
-            'SELECT * FROM giamgia WHERE tengiamgia = ?',
+            'SELECT idGiamGia, soluong FROM giamgia WHERE tengiamgia = ?',
             [discountcode]
         );
 
@@ -320,7 +320,14 @@ const adddiscount = async (req, res) => {
         }
 
         const idGiamGia = discount[0].idGiamGia;
-        // Kiểm tra nếu mã giảm giá đã được thêm cho khách hàng này
+        const soluong = discount[0].soluong;
+
+        // Kiểm tra số lượng mã giảm giá
+        if (soluong <= 0) {
+            return res.status(400).json({ message: 'Discount code is out of stock!' });
+        }
+
+        // Kiểm tra xem mã giảm giá đã được gán cho khách hàng chưa
         const [existingEntry] = await connection.execute(
             'SELECT * FROM chitietgiamgia WHERE idKhachHang = ? AND idGiamGia = ?',
             [id, idGiamGia]
@@ -335,6 +342,13 @@ const adddiscount = async (req, res) => {
             'INSERT INTO chitietgiamgia (idKhachHang, idGiamGia, trangthai) VALUES (?, ?, ?)',
             [id, idGiamGia, 0] // 0 là trạng thái chưa sử dụng
         );
+
+        // Giảm số lượng trong bảng giamgia
+        await connection.execute(
+            'UPDATE giamgia SET soluong = soluong - 1 WHERE idGiamGia = ?',
+            [idGiamGia]
+        );
+
         return res.status(201).json({ message: 'Discount successfully added to the customer' });
     } catch (error) {
         console.error(error);
