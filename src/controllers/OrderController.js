@@ -242,19 +242,59 @@ const updateorder = async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Order not found or update failed' });
         }
-        const send = await sendNotification({
-            title: 'Petland',
-            body: `Đơn hàng của bạn đã được cập nhật trang thái`,
-            token: `ExponentPushToken[soy2kbGJONSzlZBnkTJJ3T]`, // Token từ body request
+
+        // Lấy tất cả token từ bảng khachhang
+        const [tokenRows] = await connection.execute(
+            'SELECT token FROM khachhang WHERE token IS NOT NULL'
+        );
+        console.log('tokenRows:', tokenRows); // Để kiểm tra dữ liệu trả về
+
+        // Tạo danh sách token từ các giá trị trong DB
+        let allTokens = [];
+        tokenRows.forEach(row => {
+            if (row.token) {
+                let tokens = [];
+                if (typeof row.token === 'string') {
+                    try {
+                        // Thử parse chuỗi JSON
+                        tokens = JSON.parse(row.token);
+                    } catch (err) {
+                        console.error(`Lỗi khi parse token: ${row.token}`, err);
+                        // Nếu không phải JSON, tách bằng dấu phẩy
+                        tokens = row.token.split(',').map(t => t.trim());
+                    }
+                } else if (Array.isArray(row.token)) {
+                    // Nếu driver đã parse thành mảng
+                    tokens = row.token;
+                }
+
+                // Đảm bảo tokens là mảng và thêm vào allTokens
+                if (Array.isArray(tokens)) {
+                    allTokens = allTokens.concat(tokens);
+                } else {
+                    console.warn(`Token không phải mảng: ${row.token}`);
+                }
+            }
         });
+
+        // Gửi thông báo từng cái một nếu có token
+        if (allTokens.length > 0) {
+            for (const token of allTokens) {
+                await sendNotification({
+                    title: 'Petland',
+                    body: `Đơn hàng ${id} đã được cập nhật trạng thái `,
+                    token: token
+                });
+                console.log(`Đã gửi thông báo tới token: ${token}`);
+            }
+        }
+
         return res.status(200).json({ message: 'Order updated successfully', newTrangThai });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Error updating order', error });
     }
 };
-
-
 export default {
     orderbyid,
     deleteorder,
