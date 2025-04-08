@@ -5,7 +5,7 @@ const orderbyid = async (req, res) => {
     try {
         // Lấy danh sách đơn hàng của khách hàng, bao gồm cả ghi chú
         const [orders] = await connection.execute(
-            `SELECT iddonhang, ghichu, trangthai, ngaytao, ngaygiaohang, tongtien,tt_cod, tt_online FROM donhang WHERE idKhachHang = ?`,
+            `SELECT iddonhang, ghichu, trangthai, ngaytao, ngaygiaohang,idGiamGia, tongtien,tt_cod, tt_online FROM donhang WHERE idKhachHang = ?`,
             [id]
         );
 
@@ -49,6 +49,7 @@ const orderbyid = async (req, res) => {
                 ngaygiaohang: order.ngaygiaohang,
                 tongtien: order.tongtien,
                 tt_online: order.tt_online,
+                idGiamGia: order.idGiamGia,
                 ghichu: order.ghichu, // Lấy ghi chú từ bảng donhang
                 products: updatedProducts
             });
