@@ -1,0 +1,52 @@
+import connection from '../config/database.js'
+import sendNotification from '../middleware/notification.js';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const getNotification = async (req, res) => {
+    const idKhachHang = req.user.id;
+    try {
+        if (!idKhachHang) {
+        return res.status(400).json({ message: 'Thiếu ID khách hàng' });
+        }
+
+        const [rows] = await connection.execute(
+        'SELECT * FROM thongbao WHERE idKhachHang = ? ORDER BY ngaytao DESC',
+        [idKhachHang]
+        );
+
+        return res.status(200).json({ data: rows });
+    } catch (error) {
+        console.error('Lỗi khi lấy thông báo:', error);
+        return res.status(500).json({ message: 'Lỗi server', error });
+    }
+};
+const updateNotification = async (req, res) => {
+    const { idThongBao } = req.body;
+    
+    try {
+      if (!idThongBao) {
+        return res.status(400).json({ message: 'Thiếu ID thông báo hoặc trạng thái' });
+      }
+  
+      const [result] = await connection.execute(
+        'UPDATE thongbao SET trangthai = ? WHERE id = ?',
+        [0, idThongBao]
+      );
+  
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Không tìm thấy thông báo' });
+      }
+      const [rows] = await connection.execute(
+        'SELECT * FROM thongbao WHERE id = ?',
+        [idThongBao]
+    );
+      return res.status(200).json({ message: 'Cập nhật trạng thái thành công' , data: rows });
+    } catch (error) {
+      console.error('Lỗi khi cập nhật trạng thái:', error);
+      return res.status(500).json({ message: 'Lỗi server', error });
+    }
+};
+  
+export default { getNotification, updateNotification };
+  

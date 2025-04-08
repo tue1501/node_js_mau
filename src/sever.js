@@ -16,6 +16,7 @@ import cors from 'cors';
 import User from './route/user.js';
 import Admin from './route/admin.js';
 import emailRoutes from './route/email.js';
+import Notification from './route/notification.js';
 dotenv.config();
 
 const app = express(); 
@@ -53,6 +54,7 @@ emailRoutes(app);
 Evaluate(app);
 discount(app);
 Admin(app);
+Notification(app);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

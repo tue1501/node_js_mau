@@ -229,16 +229,16 @@ const order = async (req, res) => {
 };
 const updateorder = async (req, res) => {
     const { id } = req.params;
-    const { status } = req.body; // "increase" hoặc "decrease"
+    const { status } = req.body;
 
     try {
         if (!id || !status) {
             return res.status(400).json({ message: 'Missing order ID or status' });
         }
 
-        // Kiểm tra xem đơn hàng có tồn tại không
+        // Lấy trạng thái và ID khách hàng
         const [rows] = await connection.query(
-            'SELECT trangthai FROM donhang WHERE idDonHang = ?',
+            'SELECT trangthai, idKhachHang FROM donhang WHERE idDonHang = ?',
             [id]
         );
 
@@ -247,8 +247,9 @@ const updateorder = async (req, res) => {
         }
 
         let newTrangThai = rows[0].trangthai;
+        const idKhachHang = rows[0].idKhachHang;
 
-        // Kiểm tra giới hạn trước khi cập nhật
+        // Kiểm tra giới hạn
         if (status === "increase") {
             if (newTrangThai >= 4) {
                 return res.status(400).json({ message: 'Order status cannot be greater than 4' });
@@ -263,58 +264,62 @@ const updateorder = async (req, res) => {
             return res.status(400).json({ message: 'Invalid status value' });
         }
 
-        // Cập nhật trạng thái trong database
-        const query = `UPDATE donhang SET trangthai = ? WHERE idDonHang = ?`;
-        const [result] = await connection.execute(query, [newTrangThai, id]);
+        // Cập nhật trạng thái
+        const [result] = await connection.execute(
+            `UPDATE donhang SET trangthai = ? WHERE idDonHang = ?`,
+            [newTrangThai, id]
+        );
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Order not found or update failed' });
         }
 
-        // Lấy tất cả token từ bảng khachhang
+        // Lấy token của khách hàng này thôi
         const [tokenRows] = await connection.execute(
-            'SELECT token FROM khachhang WHERE token IS NOT NULL'
+            'SELECT token FROM khachhang WHERE idKhachHang = ? AND token IS NOT NULL',
+            [idKhachHang]
         );
-        console.log('tokenRows:', tokenRows); // Để kiểm tra dữ liệu trả về
 
-        // Tạo danh sách token từ các giá trị trong DB
         let allTokens = [];
         tokenRows.forEach(row => {
             if (row.token) {
                 let tokens = [];
                 if (typeof row.token === 'string') {
                     try {
-                        // Thử parse chuỗi JSON
                         tokens = JSON.parse(row.token);
                     } catch (err) {
-                        console.error(`Lỗi khi parse token: ${row.token}`, err);
-                        // Nếu không phải JSON, tách bằng dấu phẩy
                         tokens = row.token.split(',').map(t => t.trim());
                     }
                 } else if (Array.isArray(row.token)) {
-                    // Nếu driver đã parse thành mảng
                     tokens = row.token;
                 }
 
-                // Đảm bảo tokens là mảng và thêm vào allTokens
                 if (Array.isArray(tokens)) {
                     allTokens = allTokens.concat(tokens);
-                } else {
-                    console.warn(`Token không phải mảng: ${row.token}`);
                 }
             }
         });
 
-        // Gửi thông báo từng cái một nếu có token
+        // Gửi thông báo tới tất cả token (nếu có)
         if (allTokens.length > 0) {
+            const notifyTitle = 'Petland';
+            const notifyBody = `Đơn hàng ${id} đã được cập nhật trạng thái`;
+
             for (const token of allTokens) {
                 await sendNotification({
-                    title: 'Petland',
-                    body: `Đơn hàng ${id} đã được cập nhật trạng thái `,
-                    token: token
+                    title: notifyTitle,
+                    body: notifyBody,
+                    token: token,
                 });
-                console.log(`Đã gửi thông báo tới token: ${token}`);
             }
+
+            // Sau khi gửi xong => chỉ lưu 1 lần
+            await connection.execute(
+                'INSERT INTO thongbao (tieude, noidung, idKhachHang, trangthai) VALUES (?, ?, ?, ?)',
+                [notifyTitle, notifyBody, idKhachHang, 1]
+            );
+
+            console.log(`✔ Đã lưu 1 bản ghi thông báo vào DB cho khách hàng ID ${idKhachHang}`);
         }
 
         return res.status(200).json({ message: 'Order updated successfully', newTrangThai });
@@ -323,6 +328,7 @@ const updateorder = async (req, res) => {
         return res.status(500).json({ message: 'Error updating order', error });
     }
 };
+
 export default {
     orderbyid,
     deleteorder,

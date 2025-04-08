@@ -3,8 +3,7 @@ import fetch from 'node-fetch';
 
 // Hàm gửi thông báo
 async function sendNotification({ title, body, token }) {
-  // Kiểm tra xem có token không
-  const pushToken = token ;  // Token mặc định nếu không có token trong body
+  const pushToken = token;
   if (!pushToken) {
     throw new Error("Token is required");
   }
@@ -17,7 +16,6 @@ async function sendNotification({ title, body, token }) {
   };
 
   try {
-    // Gửi thông báo tới Expo
     const response = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
       headers: {
@@ -28,11 +26,13 @@ async function sendNotification({ title, body, token }) {
     });
 
     const result = await response.json();
-    return result;  // Trả về kết quả cho controller gọi hàm này
+    console.log(`🔔 Đã gửi thông báo tới token: ${pushToken}`);
+    return result;
   } catch (error) {
-    console.error("Error sending notification:", error);
-    throw new Error(error.message); // Ném lỗi để controller có thể xử lý
+    console.error("❌ Lỗi khi gửi thông báo:", error);
+    throw new Error(error.message);
   }
 }
+
 
 export default sendNotification;
