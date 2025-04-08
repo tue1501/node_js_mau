@@ -66,42 +66,69 @@ const orderbyid = async (req, res) => {
 
 
 const deleteorder = async (req, res) => {
-    const id = req.user.id; 
-    const { iddonhang } = req.body; // Lấy thông tin từ body
+    const id = req.user.id; // idKhachHang từ token
+    const { iddonhang } = req.body; // Lấy idDonHang từ body
+
     try {
         if (!id) {
             return res.status(400).json({ message: 'Customer ID is required' });
         }
 
         if (!iddonhang) {
-            return res.status(400).json({ message: 'No fields to update' });
+            return res.status(400).json({ message: 'Order ID is required' });
         }
+
+        // Kiểm tra đơn hàng có tồn tại và thuộc về khách hàng không
         const [rows] = await connection.query(
-            'SELECT idKhachHang FROM donhang WHERE idDonHang = ? AND idKhachHang = ?',
+            'SELECT idKhachHang, idGiamGia FROM donhang WHERE idDonHang = ? AND idKhachHang = ?',
             [iddonhang, id]
         );
+
         if (rows.length !== 1) {
             return res.status(404).json({ message: 'Order not found or does not belong to this customer!' });
         }
-                
-        // Cập nhật thông tin khách hàng
-        const query = `
-            UPDATE donhang 
-            SET
-                trangthai = 4
-            WHERE iddonhang = ?
-        `;
-        const [result] = await connection.execute(query, [
-            iddonhang,
-        ]);
 
-        if (result.affectedRows === 0) {
+        const order = rows[0];
+        const idGiamGia = order.idGiamGia;
+
+        // Bắt đầu transaction để đảm bảo tính toàn vẹn
+        await connection.beginTransaction();
+
+        // Cập nhật trạng thái đơn hàng thành 4
+        const updateOrderQuery = `
+            UPDATE donhang 
+            SET trangthai = 4
+            WHERE idDonHang = ?
+        `;
+        const [updateOrderResult] = await connection.execute(updateOrderQuery, [iddonhang]);
+
+        if (updateOrderResult.affectedRows === 0) {
+            await connection.rollback();
             return res.status(404).json({ message: 'Order not found' });
         }
+
+        // Nếu có idGiamGia, cập nhật trạng thái trong chitietgiamgia
+        if (idGiamGia) {
+            const updateChitietQuery = `
+                UPDATE chitietgiamgia 
+                SET trangthai = 0
+                WHERE idKhachHang = ? AND idGiamGia = ?
+            `;
+            const [updateChitietResult] = await connection.execute(updateChitietQuery, [id, idGiamGia]);
+
+            if (updateChitietResult.affectedRows > 0) {
+                console.log(`Đã cập nhật ${updateChitietResult.affectedRows} bản ghi trong chitietgiamgia`);
+            }
+        }
+
+        // Commit transaction
+        await connection.commit();
         return res.status(200).json({ message: 'Order updated successfully' });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Error updating customer', error });
+        // Rollback nếu có lỗi
+        await connection.rollback();
+        console.error('Lỗi khi cập nhật đơn hàng:', error);
+        return res.status(500).json({ message: 'Error updating order', error: error.message });
     }
 };
 

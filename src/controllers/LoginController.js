@@ -213,7 +213,7 @@ const addaddress = async (req, res) => {
             const query = `
             UPDATE khachhang 
             SET 
-                diachi = COALESCE(?, diachi),
+                diachi = ?
             WHERE idKhachHang = ?
             `;
             const [result] = await connection.execute(query, [
@@ -358,7 +358,7 @@ const adddiscount = async (req, res) => {
 
 
 const discountbyid = async (req, res) => {
-    const id = req.user.id; // Lấy ID từ token đã giải mã\
+    const id = req.user.id; 
 
     try {
         const currentDate = new Date().toISOString().slice(0, 19).replace('T', ' '); // Lấy thời gian hiện tại
