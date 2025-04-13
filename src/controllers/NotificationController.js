@@ -47,6 +47,28 @@ const updateNotification = async (req, res) => {
       return res.status(500).json({ message: 'Lỗi server', error });
     }
 };
+ 
+const sendNotificationToUser = async (req, res) => {
+    const { title, body, token } = req.body;
   
-export default { getNotification, updateNotification };
+    if (!token) {
+      return res.status(400).json({ message: 'Thiếu token' });
+    }
+  
+    try {
+      const result = await sendNotification({ title, body, token });
+      res.status(200).json({
+        message: 'Thông báo đã được gửi thành công',
+        info: result,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Lỗi khi gửi thông báo',
+        error: error.message,
+      });
+    }
+  };
+
+
+export default { getNotification, updateNotification,sendNotificationToUser };
   

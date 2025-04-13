@@ -35,6 +35,8 @@ const setupRoutes = (app) => {
 
     router.post('/addtoken',authenticateJWT,LoginController.addtoken);
 
+    router.get('/checktonken',authenticateJWTadmin,LoginController.checktonken);
+
     return app.use('/api', router);
 }
 export default setupRoutes;

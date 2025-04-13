@@ -401,6 +401,9 @@ const logout = (req, res) => {
         jwtBlacklist.add(token);  // Đưa token vào blacklist để không sử dụng lại
 
         res.clearCookie('token');  // Nếu bạn dùng cookie để lưu token
+        for (const token of jwtBlacklist) {
+            console.log(token);
+        }
         return res.status(200).json({ success: true, message: 'Logged out successfully' });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
@@ -554,7 +557,30 @@ const addtoken = async (req, res) => {
     }
 };
 
+const checktonken = async (req, res) => {
+    try {
+        const token = req.header('Authorization')?.split(' ')[1]; // Lấy token từ header Authorization
+        const id = req.admin.id; // Lấy ID từ token đã giải mã
+        console.log(id);
+        if (!token) {
+            return res.status(400).json({ success: false, message: 'Token missing' });
+        }
+
+        const [result] = await connection.execute(
+            'SELECT * FROM qtv WHERE idQtv = ?',
+            [id]
+        );
+        if (result.length === 0) {
+            return res.status(404).json({ success: false, message: 'Token không hợp lệ' });
+        }
+        return res.status(200).json({ success: true, message: 'Token hợp lệ' });
+    } catch (error) {
+        console.error('Lỗi khi kiểm tra token:', error);
+        return res.status(500).json({ success: false, message: 'Lỗi hệ thống khi kiểm tra token!', error: error.message });
+    }
+}
+
 // Xuất khẩu hàm getAllUsers
 export default { 
-    Register,Login,informations,addaddress,resertpass,adddiscount,discountbyid,logout,Loginelenew,LoginQtv,addAdmin,addtoken
+    Register,Login,informations,addaddress,resertpass,adddiscount,discountbyid,logout,Loginelenew,LoginQtv,addAdmin,addtoken,checktonken
 };
