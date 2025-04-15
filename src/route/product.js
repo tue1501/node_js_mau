@@ -40,7 +40,11 @@ const initAPiRouter = (app) => {
 
     router.get('/getProductByColorId/:id',authenticateJWT,ProductController.getProductByColorId);
 
+    router.put('/updateProductImage/:id', uploadMultiple, ProductController.updateProductImage);
+
     router.post('/search', ProductController.search);
+
+    router.put('/updatecolor/:id', authenticateJWT,uploadMultiple,ProductController.updateProductcolor);
 
     return app.use('/api', router);
 }

@@ -274,6 +274,7 @@ const order = async (req, res) => {
         });
     }
 };
+
 const updateorder = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
