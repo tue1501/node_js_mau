@@ -184,13 +184,12 @@ const getOrderById = async (req, res) => {
     try {
         // Lấy thông tin đơn hàng theo ID
         const [orders] = await connection.execute(
-            `SELECT dh.iddonhang, dh.ghichu, kh.hoten
+            `SELECT dh.*, kh.*
             FROM donhang dh
             JOIN khachhang kh ON dh.idKhachHang = kh.idKhachHang
             WHERE dh.iddonhang = ?`,
             [id]
         );
-        
         if (orders.length === 0) {
             return res.status(404).json({ message: 'Order not found!' });
         }
@@ -213,12 +212,32 @@ const getOrderById = async (req, res) => {
             LEFT JOIN sanpham_mau_hinhanh mh ON c.idMau = mh.id
             LEFT JOIN sanpham p ON mh.idSanPham = p.idSanPham
             WHERE c.idDonhang = ?`,
-            [order.iddonhang]
+            [order.idDonhang]
         );
         return res.status(200).json({
-            iddonhang: order.iddonhang,
+            iddonhang: order.idDonhang,
+            trangthai: order.trangthai,
+            tt_cod: order.tt_cod,
+            ngaytao: order.ngaytao,
+            ngaygiaohang: order.ngaygiaohang,
+            tongtien: order.tongtien,
+            tt_online: order.tt_online,
+            idGiamGia: order.idGiamGia,
+            tenGiamGia: order.tengiamgia,
+            ngayBatDau: order.ngaybatdau,
+            ngayKetThuc: order.ngayketthuc,
+            moTa: order.mota,
+            giamGia: order.giamgia,
+            dangGiamGia: order.danggiamgia,
+            giamIn: order.giamin,
+            giamAx: order.giamax,
+            soLuong: order.soluong,
+            ghichu: order.ghichu, // Lấy ghi chú từ bảng donhang
+            noinhan: order.noinhan,
+            idKhachHang: order.idKhachHang,
             hoten: order.hoten,
-            ghichu: order.ghichu,
+            sdt:order.sdt,
+            gmail: order.gmail,
             products: products
         });
     } catch (err) {
@@ -229,6 +248,10 @@ const getOrderById = async (req, res) => {
         });
     }
 };
+
+
+
+
 const order = async (req, res) => {
     const { id } = req.params;
     const  idkhachhang  = req.user.id;
