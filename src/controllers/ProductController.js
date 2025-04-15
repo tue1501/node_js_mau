@@ -455,13 +455,20 @@ const updateProduct = async (req, res) => {
 const updateProductImage = async (req, res) => {
     try {
         const { id } = req.params;
-        if (!req.files) {
+
+        // Kiểm tra có file được upload không
+        if (!req.files || req.files.length === 0) {
             return res.status(400).json({ message: "Không có ảnh nào được tải lên!" });
         }
-        const img = req.files[0]; // Lấy ảnh đầu tiên từ mảng files
+
+        // Lấy file ảnh đầu tiên
+        const img = req.files[0];
+
+        // Upload lên Cloudinary
         const uploadResult = await cloudinary.uploader.upload(img.path);
         const imageUrl = uploadResult.secure_url;
 
+        // Cập nhật vào database
         const [results] = await connection.execute(
             `UPDATE sanpham SET hinhanh = ? WHERE idSanPham = ?`,
             [imageUrl, id]
