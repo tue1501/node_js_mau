@@ -15,6 +15,7 @@ const orderbyid = async (req, res) => {
                 donhang.tongtien, 
                 donhang.tt_cod, 
                 donhang.tt_online,
+                donhang.noinhan,
                 giamgia.*
              FROM donhang 
              LEFT JOIN giamgia ON donhang.idGiamGia = giamgia.idGiamGia 
@@ -61,6 +62,7 @@ const orderbyid = async (req, res) => {
                 ngaytao: order.ngaytao,
                 ngaygiaohang: order.ngaygiaohang,
                 tongtien: order.tongtien,
+                noinhan: order.noinhan,
                 tt_online: order.tt_online,
                 idGiamGia: order.idGiamGia,
                 tenGiamGia: order.tengiamgia,
@@ -160,7 +162,7 @@ const getAllOrders = async (req, res) => {
     try {
         // Truy vấn đơn hàng với trường ngày tạo (ngaytao) và ngày giao hàng (ngaygiaohang) trong khoảng thời gian từ fromDate đến toDate
         const [orders] = await connection.execute(
-            `SELECT idDonhang, tenkh, sdtkh, ngaytao, ngaygiaohang, tongtien, ghichu, trangthai
+            `SELECT *
             FROM donhang`,
         );
         
