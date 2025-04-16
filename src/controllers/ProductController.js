@@ -491,11 +491,10 @@ const updateProductImage = async (req, res) => {
 const updateProductcolor = async (req, res) => {
     try {
         const { id } = req.params;
-        const { tenmau, so_luong } = req.body;
+        let { tenmau, so_luong } = req.body;
 
-        // Kiểm tra dữ liệu bắt buộc
-        if (!tenmau || !so_luong) {
-            return res.status(400).json({ message: "Thiếu thông tin tên màu hoặc số lượng!" });
+        if (typeof tenmau === 'undefined' || tenmau === '') {
+            tenmau = null;
         }
 
         let imageUrl = null;
