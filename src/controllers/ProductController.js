@@ -537,6 +537,50 @@ const updateProductcolor = async (req, res) => {
     }
 };
 
+const createProductColor = async (req, res) => {
+    try {
+        const { idsanpham, tenmau, so_luong } = req.body;
+
+        // Kiểm tra các trường bắt buộc
+        if (!idsanpham || !tenmau || !so_luong || !(req.files && req.files.length > 0)) {
+            return res.status(400).json({
+                message: "Vui lòng cung cấp đầy đủ các trường: idsanpham, tenmau, so_luong và hinhanh!"
+            });
+        }
+
+        // Kiểm tra số lượng là số
+        if (isNaN(so_luong) || parseInt(so_luong) < 0) {
+            return res.status(400).json({ message: "so_luong phải là một số không âm!" });
+        }
+
+        const img = req.files[0];
+        const uploadResult = await cloudinary.uploader.upload(img.path);
+        const imageUrl = uploadResult.secure_url;
+
+        const query = `
+            INSERT INTO sanpham_mau_hinhanh (idsanpham, tenmau, so_luong, hinhanh)
+            VALUES (?, ?, ?, ?)
+        `;
+        const queryParams = [idsanpham, tenmau, so_luong, imageUrl];
+
+        const [results] = await connection.execute(query, queryParams);
+
+        return res.status(201).json({
+            message: "Thêm màu sản phẩm thành công!",
+            id: results.insertId,
+            idsanpham,
+            tenmau,
+            so_luong,
+            imageUrl
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Lỗi server khi thêm màu sản phẩm!" });
+    }
+};
+
+
 
 const producttypedetails = async (req, res) => {
     try {
@@ -995,5 +1039,5 @@ const search = async (req, res) => {
 export default {
     getAllproduct,producttype,producttypedetails,getProductsByDetailType,allgetProductsByDetailType
     ,getProductById,sendOtp,verifyOtp,changePassword, addProduct,addProductType
-    ,addProductTypeDetail,updateProductType,updateProductTypeDetail,updateProduct,search,updateProductImage,getProductByColorId,updateProductcolor
+    ,addProductTypeDetail,updateProductType,updateProductTypeDetail,updateProduct,search,updateProductImage,getProductByColorId,updateProductcolor,createProductColor
 };

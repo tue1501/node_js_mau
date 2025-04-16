@@ -46,6 +46,8 @@ const initAPiRouter = (app) => {
 
     router.put('/updatecolor/:id', authenticateJWT,uploadMultiple,ProductController.updateProductcolor);
 
+    router.post('/createProductColor', authenticateJWT,uploadMultiple,ProductController.createProductColor);
+
     return app.use('/api', router);
 }
 export default initAPiRouter ;
