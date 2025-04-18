@@ -7,7 +7,7 @@ const Evaluate = (app) => {
     router.get("/evaluate/:idSanPham",authenticateJWT, EvaluateController.getEvaluate);
     router.get("/evaluateByIdMau/:idMau",authenticateJWT, EvaluateController.getEvaluateByIdMau);
     router.post("/evaluate",authenticateJWT, EvaluateController.addEvaluate);
-    router.get("/evaluate", EvaluateController.getallEvaluate);
+    router.get("/evaluate",authenticateJWT, EvaluateController.getallEvaluate);
     return app.use('/api', router);
 }
 
