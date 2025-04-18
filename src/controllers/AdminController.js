@@ -153,6 +153,7 @@ export const getAlladmin = async (req, res) => {
                 qtv.gioitinh,
                 qtv.sdt,
                 qtv.cmnd,
+                quyen.idQuyen,
                 quyen.tenquyen
             FROM qtv
             JOIN quyen ON qtv.idQuyen = quyen.idQuyen
