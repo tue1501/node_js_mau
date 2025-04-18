@@ -115,8 +115,8 @@ export const getSummaryStatistics = async (req, res) => {
         const [orderRows] = await connection.execute(
             `SELECT COUNT(*) AS todayOrderCount 
              FROM donhang 
-             WHERE DATE(ngaytao) = ? OR DATE(ngaygiaohang) = ?`,
-            [todayStr, todayStr]
+             WHERE DATE(ngaytao) = ?`,
+            [todayStr]
         );
         const todayOrderCount = orderRows[0].todayOrderCount;
 
