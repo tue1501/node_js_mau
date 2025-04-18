@@ -90,9 +90,11 @@ const updateVoucher = async (req, res) => {
     try {
         const { id } = req.params;
         const { tenGiamGia, ngayBatDau, ngayKetThuc, moTa, giamGia, dangGiamGia, giamIn, giamAx, soLuong } = req.body;
+
+        // Kiểm tra tên có trùng nhưng không tính voucher hiện tại
         const [existingVoucher] = await connection.execute(
-            'SELECT tenGiamGia FROM giamgia WHERE tenGiamGia = ?',
-            [tenGiamGia]
+            'SELECT tenGiamGia FROM giamgia WHERE tenGiamGia = ? AND idGiamGia != ?',
+            [tenGiamGia, id]
         );
 
         if (existingVoucher.length > 0) {
@@ -119,6 +121,7 @@ const updateVoucher = async (req, res) => {
         });
     }
 };
+
 
 const deleteVoucher = async (req, res) => {
     try {
