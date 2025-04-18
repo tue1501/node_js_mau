@@ -453,21 +453,21 @@ const LoginQtv = async (req, res) => {
 
 const addAdmin = async (req, res) => {
     try {
-        const { hoten, sdt, matkhau, idQuyen } = req.body;
+        const { hoten, sdt, matkhau, idQuyen, ngaysinh, gioitinh, cmnd } = req.body;
 
-        // Kiểm tra dữ liệu đầu vào
+        // Kiểm tra dữ liệu bắt buộc
         if (!hoten || !sdt || !matkhau || !idQuyen) {
             return res.status(400).json({ message: 'Tên, số điện thoại, mật khẩu và idQuyen là bắt buộc!' });
         }
 
-        // Kiểm tra email đã tồn tại chưa
+        // Kiểm tra số điện thoại đã tồn tại chưa
         const [existingAdmin] = await connection.execute(
             'SELECT * FROM qtv WHERE sdt = ?',
             [sdt]
         );
-        
+
         if (existingAdmin.length > 0) {
-            return res.status(400).json({ message: 'sdt đã tồn tại!' });
+            return res.status(400).json({ message: 'Số điện thoại đã tồn tại!' });
         }
 
         // Mã hóa mật khẩu
@@ -475,9 +475,18 @@ const addAdmin = async (req, res) => {
 
         // Thêm admin mới vào database
         const [result] = await connection.execute(
-            'INSERT INTO qtv (hoten, sdt, matkhau, idQuyen) VALUES (?, ?, ?, ?)',
-            [hoten, sdt, hashedPassword, idQuyen]
+            `INSERT INTO qtv (hoten, sdt, matkhau, idQuyen, ngaysinh, gioitinh, cmnd)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [hoten, sdt, hashedPassword, idQuyen, ngaysinh || null, gioitinh || null, cmnd || null]
         );
+
+        // Lấy tên quyền
+        const [quyenRows] = await connection.execute(
+            'SELECT tenquyen FROM quyen WHERE idQuyen = ?',
+            [idQuyen]
+        );
+
+        const tenquyen = quyenRows.length > 0 ? quyenRows[0].tenquyen : null;
 
         return res.status(201).json({
             message: 'Admin đã được thêm thành công!',
@@ -485,7 +494,10 @@ const addAdmin = async (req, res) => {
                 id: result.insertId,
                 hoten,
                 sdt,
-                idQuyen,
+                tenquyen,
+                ngaysinh: ngaysinh || null,
+                gioitinh: gioitinh || null,
+                cmnd: cmnd || null
             }
         });
     } catch (err) {
@@ -493,6 +505,7 @@ const addAdmin = async (req, res) => {
         return res.status(500).json({ message: 'Lỗi hệ thống khi thêm admin!', error: err.message });
     }
 };
+
 
 const addtoken = async (req, res) => {
     try {

@@ -143,5 +143,56 @@ export const getSummaryStatistics = async (req, res) => {
         res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
     }
 };
+export const getAlladmin = async (req, res) => {
+    try {
+        const [rows] = await connection.query(`
+            SELECT 
+                qtv.idQtv,
+                qtv.hoten,
+                qtv.ngaysinh,
+                qtv.gioitinh,
+                qtv.sdt,
+                qtv.cmnd,
+                quyen.tenquyen
+            FROM qtv
+            JOIN quyen ON qtv.idQuyen = quyen.idQuyen
+        `);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'No users found!' });
+        }
+        return res.status(200).json(rows);
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        return res.status(500).json({ message: 'Error fetching users.' });
+    }
+};
+const updateAdmin = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { hoten, sdt, ngaysinh, gioitinh, cmnd, idQuyen } = req.body;
 
-export default { repcomment,getSummaryStatistics };
+        if (!id) {
+            return res.status(400).json({ message: 'Thiếu ID admin!' });
+        }
+
+        // Cập nhật thông tin admin
+        const [result] = await connection.execute(
+            `UPDATE qtv 
+             SET hoten = ?, sdt = ?, ngaysinh = ?, gioitinh = ?, cmnd = ?, idQuyen = ?
+             WHERE idQtv = ?`,
+            [hoten, sdt, ngaysinh || null, gioitinh || null, cmnd || null, idQuyen, id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy admin hoặc không có thay đổi!' });
+        }
+
+        return res.status(200).json({ message: 'Cập nhật admin thành công!' });
+    } catch (err) {
+        console.error('Lỗi khi cập nhật admin:', err);
+        return res.status(500).json({ message: 'Lỗi hệ thống khi cập nhật admin!', error: err.message });
+    }
+};
+
+
+export default { repcomment,getSummaryStatistics,getAlladmin,updateAdmin };

@@ -7,6 +7,8 @@ const router = express.Router();
 const Admin = (app) => {
     router.post('/repcomment/:id', authenticateJWTadmin,AdminController.repcomment);
     router.get('/dashboard',authenticateJWTadmin,AdminController.getSummaryStatistics);
+    router.get('/admin',authenticateJWTadmin,checkSuperAdmin,AdminController.getAlladmin);
+    router.put('/updateadmin/:id', authenticateJWTadmin, checkSuperAdmin, AdminController.updateAdmin);
     return app.use('/api', router);
 }
 
