@@ -85,5 +85,63 @@ const repcomment = async (req, res) => {
         return res.status(500).json({ message: 'Lỗi hệ thống khi trả lời đánh giá!', error: error.message });
     }
 };
+export const getSummaryStatistics = async (req, res) => {
+    try {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
 
-export default { repcomment };
+        // Lấy ngày đầu và cuối tháng hiện tại
+        const getLocalDateStr = (date) => {
+            const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+            return local.toISOString().split('T')[0];
+        };
+        
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        const startStr = getLocalDateStr(startOfMonth);
+        const endStr = getLocalDateStr(endOfMonth);
+
+        // 1. Tổng doanh thu tháng hiện tại (trangthai = 4)
+        const [revenueRows] = await connection.execute(
+            `SELECT SUM(tongtien) AS totalRevenue 
+             FROM donhang 
+             WHERE ngaygiaohang BETWEEN ? AND ? AND trangthai = 4`,
+            [startStr, endStr]
+        );
+        const monthlyRevenue = revenueRows[0].totalRevenue || 0;
+
+        // 2. Số đơn hàng hôm nay
+        const [orderRows] = await connection.execute(
+            `SELECT COUNT(*) AS todayOrderCount 
+             FROM donhang 
+             WHERE DATE(ngaytao) = ? OR DATE(ngaygiaohang) = ?`,
+            [todayStr, todayStr]
+        );
+        const todayOrderCount = orderRows[0].todayOrderCount;
+
+        // 3. Tổng số khách hàng
+        const [customerRows] = await connection.execute(`SELECT COUNT(*) AS totalCustomers FROM khachhang`);
+        const totalCustomers = customerRows[0].totalCustomers;
+
+        // 4. Tổng số sản phẩm
+        const [productRows] = await connection.execute(`SELECT COUNT(*) AS totalProducts FROM sanpham`);
+        const totalProducts = productRows[0].totalProducts;
+
+        res.json({
+            success: true,
+            data: {
+                monthlyRevenue,
+                todayOrderCount,
+                totalCustomers,
+                totalProducts
+            }
+        });
+
+    } catch (error) {
+        console.error('Lỗi khi lấy dữ liệu tổng:', error);
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
+    }
+};
+
+export default { repcomment,getSummaryStatistics };

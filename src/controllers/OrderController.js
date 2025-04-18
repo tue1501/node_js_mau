@@ -312,17 +312,21 @@ const updateorder = async (req, res) => {
             return res.status(400).json({ message: 'Invalid status value' });
         }
 
-        // Cập nhật trạng thái
-        const [result] = await connection.execute(
-            `UPDATE donhang SET trangthai = ? WHERE idDonHang = ?`,
-            [newTrangThai, id]
-        );
+        // Cập nhật trạng thái (và ngaygiaohang nếu trạng thái là 4)
+        let updateQuery = `UPDATE donhang SET trangthai = ? WHERE idDonHang = ?`;
+        let updateParams = [newTrangThai, id];
+
+        if (newTrangThai === 4) {
+            updateQuery = `UPDATE donhang SET trangthai = ?, ngaygiaohang = NOW() WHERE idDonHang = ?`;
+        }
+
+        const [result] = await connection.execute(updateQuery, updateParams);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Order not found or update failed' });
         }
 
-        // Lấy token của khách hàng này thôi
+        // Lấy token của khách hàng
         const [tokenRows] = await connection.execute(
             'SELECT token FROM khachhang WHERE idKhachHang = ? AND token IS NOT NULL',
             [idKhachHang]
@@ -348,7 +352,7 @@ const updateorder = async (req, res) => {
             }
         });
 
-        // Gửi thông báo tới tất cả token (nếu có)
+        // Gửi thông báo
         if (allTokens.length > 0) {
             const notifyTitle = 'Petland';
             const notifyBody = `Đơn hàng ${id} đã được cập nhật trạng thái`;
@@ -361,7 +365,6 @@ const updateorder = async (req, res) => {
                 });
             }
 
-            // Sau khi gửi xong => chỉ lưu 1 lần
             await connection.execute(
                 'INSERT INTO thongbao (tieude, noidung, idKhachHang, trangthai) VALUES (?, ?, ?, ?)',
                 [notifyTitle, notifyBody, idKhachHang, 1]
