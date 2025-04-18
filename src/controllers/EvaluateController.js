@@ -142,6 +142,40 @@ const getEvaluateByIdMau = async (req, res) => {
     }
 };
 
+const getallEvaluate = async (req, res) => {
+    try {
+
+        // Truy vấn lấy đánh giá của tất cả màu thuộc sản phẩm
+        const [rows] = await connection.execute(
+            `SELECT 
+                d.id, 
+                d.idMau, 
+                d.noidung, 
+                d.traloi, 
+                d.diem, 
+                d.ngaydanhgia, 
+                d.ngaytraloi, 
+                k.hoten AS hoten, 
+                q.hoten AS hotenqtv, 
+                m.tenMau, 
+                s.tenSP AS tensp
+            FROM danhgia d
+            JOIN khachhang k ON d.idKhachHang = k.idKhachHang
+            LEFT JOIN qtv q ON d.idQtv = q.idQtv
+            JOIN sanpham_mau_hinhanh m ON d.idMau = m.id
+            JOIN sanpham s ON m.idSanPham = s.idSanPham
+            `,
+        );        
+
+        // Trả về kết quả
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error("Lỗi khi lấy đánh giá:", error);
+        res.status(500).json({ message: "Lỗi server" });
+    }
+};
+
+
 export default {
-    getEvaluate,addEvaluate,getEvaluateByIdMau
+    getEvaluate,addEvaluate,getEvaluateByIdMau,getallEvaluate
 };
