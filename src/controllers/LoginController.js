@@ -418,7 +418,7 @@ const LoginQtv = async (req, res) => {
 
         // Kiểm tra số điện thoại của quản trị viên trong bảng qtv
         const [rows] = await connection.execute(
-            'SELECT * FROM qtv WHERE sdt = ? AND idquen = ?',
+            'SELECT * FROM qtv WHERE sdt = ? AND idQuyen = ?',
             [sdt, 3]
         );        
 
