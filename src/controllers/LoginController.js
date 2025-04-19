@@ -576,10 +576,19 @@ const checktonken = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Token missing' });
         }
 
-        const [result] = await connection.execute(
-            'SELECT idQtv, hoten, sdt, idQuyen, ngaysinh, gioitinh cmnd FROM qtv WHERE idQtv = ?',
+        const [rows] = await connection.execute(
+            'SELECT idQtv, hoten, sdt, idQuyen, ngaysinh, gioitinh, cmnd FROM qtv WHERE idQtv = ?',
             [id]
         );
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy quản trị viên' });
+        }        
+        const user = rows[0];        
+        if (user.idQuyen === 3) {
+            return res.status(401).json({ success: false, message: 'Token không hợp lệ' });
+        }
+        
         if (result.length === 0) {
             return res.status(404).json({ success: false, message: 'Token không hợp lệ' });
         }
