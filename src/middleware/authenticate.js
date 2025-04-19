@@ -22,9 +22,7 @@ const authenticateJWT = (req, res, next) => {
         if (!decoded.id) {
             return res.status(400).json({ success: false, message: 'Invalid token, user ID missing' });
         }
-        if (rows.length === 1 || rows[0].idQuyen === 2) {
-            return res.status(403).json({ message: 'cút' });
-        }
+       
         req.user = decoded;  // Gán thông tin người dùng vào req.user để sử dụng trong các route
         next();  // Tiếp tục xử lý yêu cầu
     } catch (err) {

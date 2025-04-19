@@ -418,12 +418,12 @@ const LoginQtv = async (req, res) => {
 
         // Kiểm tra số điện thoại của quản trị viên trong bảng qtv
         const [rows] = await connection.execute(
-            'SELECT * FROM qtv WHERE sdt = ?',
-            [sdt]
-        );
+            'SELECT * FROM qtv WHERE sdt = ? AND idquen = ?',
+            [sdt, 3]
+        );        
 
         if (rows.length === 0) {
-            return res.status(404).json({ message: 'Quản trị viên không tồn tại!' });
+            return res.status(404).json({ message: 'Quản trị viên không tồn tại hoặc bạn không có quyềnquyền!' });
         }
 
         const qtv = rows[0];
