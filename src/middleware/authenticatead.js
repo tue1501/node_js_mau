@@ -32,7 +32,7 @@ const authenticateJWTadmin = async (req, res, next) => {
                 WHERE qtv.idQtv = ?`,
             [userId]
         );
-        if (rows.length === 1 || rows[0].idQuyen === 2) {
+        if (rows.idQuyen === 3 ) {
             return res.status(403).json({ success: false,message: 'cút' });
         }
         req.admin = decoded;  // Gán thông tin người dùng vào req.user để sử dụng trong các route
