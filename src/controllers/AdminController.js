@@ -178,7 +178,7 @@ const updateAdmin = async (req, res) => {
 
         // Kiểm tra xem admin có đang cố gắng sửa quyền của chính mình không
         
-        if (id === req.admin.id && idQuyen !== undefined) {
+        if (id == req.admin.id && idQuyen !== undefined) {
             return res.status(403).json({ message: 'Bạn không thể sửa quyền của chính mình!' });
         }
 
