@@ -9,6 +9,7 @@ const Admin = (app) => {
     router.get('/dashboard',authenticateJWTadmin,AdminController.getSummaryStatistics);
     router.get('/admin',authenticateJWTadmin,checkSuperAdmin,AdminController.getAlladmin);
     router.put('/updateadmin/:id', authenticateJWTadmin, checkSuperAdmin, AdminController.updateAdmin);
+    router.post('/updateShopInfo', authenticateJWTadmin, checkSuperAdmin, AdminController.updateShopInfo);
     return app.use('/api', router);
 }
 

@@ -212,5 +212,26 @@ const updateAdmin = async (req, res) => {
         return res.status(500).json({ message: 'Lỗi hệ thống khi cập nhật admin!', error: err.message });
     }
 };
+const updateShopInfo = async (req, res) => {
+    const { sdt, diachi, email, facebook } = req.body;
 
-export default { repcomment,getSummaryStatistics,getAlladmin,updateAdmin };
+    try {
+        const [result] = await connection.query(
+            `UPDATE cuahang 
+             SET sdt = ?, diachi = ?, email = ?, facebook = ?
+             WHERE id = 1`
+        , [sdt, diachi, email, facebook]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy cửa hàng để cập nhật' });
+        }
+
+        return res.status(200).json({ message: 'Cập nhật thông tin cửa hàng thành công' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Lỗi máy chủ khi cập nhật thông tin' });
+    }
+}
+
+
+export default { repcomment,getSummaryStatistics,getAlladmin,updateAdmin,updateShopInfo};

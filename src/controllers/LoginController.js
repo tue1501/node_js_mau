@@ -589,10 +589,10 @@ const checktonken = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Token không hợp lệ' });
         }
         
-        if (result.length === 0) {
+        if (rows.length === 0) {
             return res.status(404).json({ success: false, message: 'Token không hợp lệ' });
         }
-        return res.status(200).json({ success: true, result : result , message: 'Token hợp lệ' });
+        return res.status(200).json({ success: true, result : rows , message: 'Token hợp lệ' });
     } catch (error) {
         console.error('Lỗi khi kiểm tra token:', error);
         return res.status(500).json({ success: false, message: 'Lỗi hệ thống khi kiểm tra token!', error: error.message });
