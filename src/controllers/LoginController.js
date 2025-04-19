@@ -572,19 +572,18 @@ const checktonken = async (req, res) => {
     try {
         const token = req.header('Authorization')?.split(' ')[1]; // Lấy token từ header Authorization
         const id = req.admin.id; // Lấy ID từ token đã giải mã
-        console.log(id);
         if (!token) {
             return res.status(400).json({ success: false, message: 'Token missing' });
         }
 
         const [result] = await connection.execute(
-            'SELECT * FROM qtv WHERE idQtv = ?',
+            'SELECT idQtv, hoten, sdt, idQuyen, ngaysinh, gioitinh cmnd FROM qtv WHERE idQtv = ?',
             [id]
         );
         if (result.length === 0) {
             return res.status(404).json({ success: false, message: 'Token không hợp lệ' });
         }
-        return res.status(200).json({ success: true, message: 'Token hợp lệ' });
+        return res.status(200).json({ success: true, result : result , message: 'Token hợp lệ' });
     } catch (error) {
         console.error('Lỗi khi kiểm tra token:', error);
         return res.status(500).json({ success: false, message: 'Lỗi hệ thống khi kiểm tra token!', error: error.message });
