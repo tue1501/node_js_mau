@@ -181,23 +181,31 @@ const updateAdmin = async (req, res) => {
         if (id == req.admin.id && idQuyen !== undefined) {
             return res.status(403).json({ message: 'Bạn không thể sửa quyền của chính mình!' });
         }
-
-        // Cập nhật thông tin admin (bao gồm quyền nếu không phải chính admin sửa quyền)
+        // Cập nhật admin
         const [result] = await connection.execute(
             `UPDATE qtv 
-             SET hoten = ?, sdt = ?, ngaysinh = ?, gioitinh = ?, cmnd = ?, idQuyen = ?
-             WHERE idQtv = ?`,
-            [hoten, sdt, ngaysinh || null, gioitinh || null, cmnd || null, idQuyen, id]
+            SET hoten = ?, sdt = ?, ngaysinh = ?, gioitinh = ?, cmnd = ?
+            WHERE idQtv = ?`,
+            [hoten, sdt, ngaysinh || null, gioitinh || null, cmnd || null, id]
         );
-
+        
+        if (idQuyen) {
+            const [rows] = await connection.execute(
+                'UPDATE qtv SET idQuyen = ? WHERE idQtv = ?',
+                [idQuyen, id]
+            );
+            if (rows.length === 0) {
+                return res.status(404).json({ message: 'Quyền không tồn tại!' });
+            }
+        }
         // Kiểm tra nếu không tìm thấy admin cần cập nhật hoặc không có thay đổi
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Không tìm thấy admin hoặc không có thay đổi!' });
         }
-
+        
         // Trả về kết quả cập nhật thành công
         return res.status(200).json({ message: 'Cập nhật admin thành công!' });
-
+        
     } catch (err) {
         // Xử lý lỗi khi cập nhật
         console.error('Lỗi khi cập nhật admin:', err);
