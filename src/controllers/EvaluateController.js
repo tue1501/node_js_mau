@@ -24,6 +24,7 @@ const getEvaluate = async (req, res) => {
                 q.hoten AS hotenqtv, 
                 m.tenMau, 
                 s.tenSP AS tensp
+
             FROM danhgia d
             JOIN khachhang k ON d.idKhachHang = k.idKhachHang
             LEFT JOIN qtv q ON d.idQtv = q.idQtv
@@ -158,14 +159,14 @@ const getallEvaluate = async (req, res) => {
                 k.hoten AS hoten, 
                 q.hoten AS hotenqtv, 
                 m.tenMau, 
-                s.tenSP AS tensp
+                s.tenSP AS tensp,
+                COALESCE(m.hinhanh, s.hinhanh) AS hinhanh
             FROM danhgia d
             JOIN khachhang k ON d.idKhachHang = k.idKhachHang
             LEFT JOIN qtv q ON d.idQtv = q.idQtv
             JOIN sanpham_mau_hinhanh m ON d.idMau = m.id
-            JOIN sanpham s ON m.idSanPham = s.idSanPham
-            `,
-        );        
+            JOIN sanpham s ON m.idSanPham = s.idSanPham`
+        );             
 
         // Trả về kết quả
         res.status(200).json(rows);
