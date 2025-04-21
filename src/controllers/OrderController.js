@@ -354,7 +354,7 @@ const updateorder = async (req, res) => {
 
         // Gửi thông báo
         if (allTokens.length > 0) {
-            const notifyTitle = 'Petland';
+            const notifyTitle = 'Thông báo đơn hàng';
             const notifyBody = `Đơn hàng ${id} đã được cập nhật trạng thái`;
 
             for (const token of allTokens) {
