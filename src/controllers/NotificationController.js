@@ -48,6 +48,29 @@ const updateNotification = async (req, res) => {
     }
 };
  
+const deleteNotification = async (req, res) => {
+    const { id } = req.params;
+    try {
+      if (!id) {
+        return res.status(400).json({ message: 'Thiếu ID thông báo' });
+      }
+  
+      const [result] = await connection.execute(
+        'DELETE FROM thongbao WHERE id = ?',
+        [id]
+      );
+  
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Không tìm thấy thông báo' });
+      }
+  
+      return res.status(200).json({ message: 'Xóa thông báo thành công' });
+    } catch (error) {
+      console.error('Lỗi khi xóa thông báo:', error);
+      return res.status(500).json({ message: 'Lỗi server', error });
+    }
+  };
+
 const sendNotificationToUser = async (req, res) => {
     const { title, body, token } = req.body;
   
@@ -70,5 +93,5 @@ const sendNotificationToUser = async (req, res) => {
   };
 
 
-export default { getNotification, updateNotification,sendNotificationToUser };
+export default { getNotification, updateNotification,sendNotificationToUser, deleteNotification };
   
