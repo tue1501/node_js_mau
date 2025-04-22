@@ -69,7 +69,7 @@ const repcomment = async (req, res) => {
         if (allTokens.length > 0) {
             for (const token of allTokens) {
                 await sendNotification({
-                    title: 'Petland',
+                    title: 'Trả lời đánh giá',
                     body: `Đánh giá của bạn đã được trả lời: ${traloi}`,
                     token: token
                 });

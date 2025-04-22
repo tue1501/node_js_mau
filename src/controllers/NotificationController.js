@@ -92,6 +92,83 @@ const sendNotificationToUser = async (req, res) => {
     }
   };
 
+  const deletetokenbyid = async (req, res) => {
+    const id = req.user.id;
+    const { token } = req.body;
+  
+    if (!id || !token) {
+      return res.status(400).json({ message: 'Thiếu id hoặc token' });
+    }
+  
+    try {
+      // Lấy token hiện tại từ DB
+      const [rows] = await connection.execute(
+        'SELECT token FROM khachhang WHERE idKhachHang = ?',
+        [id]
+      );
+  
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Khách hàng không tồn tại' });
+      }
+  
+      let tokenArray = [];
+  
+      try {
+        // Ép kiểu chuỗi cho rawToken
+        const rawToken = String(rows[0].token); // Ép kiểu chuỗi nếu là number, null hay các kiểu không phải chuỗi
+  
+        if (!rawToken || rawToken.trim() === '') {
+          tokenArray = [];
+        } else if (rawToken.trim().startsWith('[')) {
+          tokenArray = JSON.parse(rawToken); // Nếu là chuỗi JSON hợp lệ
+        } else if (rawToken.includes(',')) {
+          tokenArray = rawToken.split(',').map(t => t.trim()); // Nếu chuỗi có dấu phẩy
+        } else {
+          tokenArray = [rawToken.trim()]; // Nếu chỉ là chuỗi đơn
+        }
+      } catch (err) {
+        console.error('Lỗi khi parse token array:', err);
+        tokenArray = [];
+      }
+  
+      // Kiểm tra xem token có trong mảng không
+      if (!tokenArray.includes(token)) {
+        return res.status(400).json({ message: 'Token không tồn tại trong hệ thống!' });
+      }
+  
+      // Xóa chỉ một token khỏi mảng
+      tokenArray = tokenArray.filter((t, index) => {
+        if (t === token && index === tokenArray.indexOf(t)) {
+          return false; // Xóa chỉ token đầu tiên tìm thấy
+        }
+        return true;
+      });
+  
+      // Cập nhật lại vào DB dưới dạng JSON
+      await connection.execute(
+        'UPDATE khachhang SET token = ? WHERE idKhachHang = ?',
+        [JSON.stringify(tokenArray), id]
+      );
+  
+      return res.status(200).json({
+        message: 'Token đã được xóa thành công!',
+        tokens: tokenArray,
+      });
+  
+    } catch (error) {
+      console.error('Lỗi khi xóa token:', error);
+      return res.status(500).json({
+        message: 'Lỗi hệ thống khi xóa token!',
+        error: error.message,
+      });
+    }
+  };
+  
+  
 
-export default { getNotification, updateNotification,sendNotificationToUser, deleteNotification };
+  
+
+
+
+export default { getNotification, updateNotification, sendNotificationToUser, deleteNotification, deletetokenbyid };
   

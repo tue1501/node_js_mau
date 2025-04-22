@@ -34,5 +34,40 @@ async function sendNotification({ title, body, token }) {
   }
 }
 
+async function sendNotificationall({ title, body }) {
+
+  if (!Array.isArray() || tokens.length === 0) {
+    throw new Error("Tokens array is required and cannot be empty");
+  }
+
+  const messages = tokens.map((token) => ({
+    to: token,
+    sound: "default",
+    title: title || "Chào bạn!",
+    body: body || "Đây là một thông báo từ Petland",
+  }));
+
+  try {
+    const responses = await Promise.all(
+      messages.map((message) =>
+        fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(message),
+        })
+      )
+    );
+
+    const results = await Promise.all(responses.map((res) => res.json()));
+    console.log(`🔔 Đã gửi thông báo tới ${tokens.length} tokens`);
+    return results;
+  } catch (error) {
+    console.error("❌ Lỗi khi gửi thông báo:", error);
+    throw new Error(error.message);
+  }
+}
 
 export default sendNotification;
