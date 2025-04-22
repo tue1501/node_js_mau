@@ -8,54 +8,83 @@ export const fetchOrdersByStatus = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Thiếu fromDate hoặc toDate' });
         }
 
-        // Truy vấn tổng tiền (tongtien) trong khoảng thời gian
+        // Truy vấn dữ liệu đơn hàng theo khoảng thời gian
         const [orders] = await connection.execute(
-            `SELECT tt_online, tongtien, trangthai 
+            `SELECT idDonhang, idKhachHang, tenkh, sdtkh, ngaytao, tongtien, tt_online, tt_cod, ghichu, trangthai 
              FROM donhang 
              WHERE ngaytao BETWEEN ? AND ? 
              AND trangthai IN (0, 1, 2, 3, 4)`,
             [fromDate, toDate]
         );
 
-        // Tạo danh sách trạng thái đơn hàng với tổng tiền
+        // Tạo danh sách trạng thái đơn hàng với count, tổng tiền online và cod
         const orderStatusMap = {
-            DaHuy: { totalAmount: 0 },         // 0 - Đã hủy
-            ChoXacNhan: { totalAmount: 0 },    // 1 - Chờ xác nhận
-            DaXacNhan: { totalAmount: 0 },     // 2 - Đã xác nhận
-            DangVanChuyen: { totalAmount: 0 }, // 3 - Đang vận chuyển
-            DangGiaoHang: { totalAmount: 0 }   // 4 - Đang giao hàng
+            DaHuy: { count: 0, totalAmountOnline: 0, totalAmountCod: 0 },         // 0 - Đã hủy
+            ChoXacNhan: { count: 0, totalAmountOnline: 0, totalAmountCod: 0 },    // 1 - Chờ xác nhận
+            DaXacNhan: { count: 0, totalAmountOnline: 0, totalAmountCod: 0 },     // 2 - Đã xác nhận
+            DangVanChuyen: { count: 0, totalAmountOnline: 0, totalAmountCod: 0 }, // 3 - Đang vận chuyển
+            DangGiaoHang: { count: 0, totalAmountOnline: 0, totalAmountCod: 0 }   // 4 - Đang giao hàng
         };
 
-        // Phân loại đơn hàng theo trạng thái và cộng tổng tiền (tongtien) nếu tt_online = 1
+        // Phân loại đơn hàng theo trạng thái và tính tổng tiền online và cod
         orders.forEach(order => {
             if (order.tt_online === 1) { // Chỉ cộng nếu tt_online = 1
                 switch (order.trangthai) {
                     case 0: // Đã hủy
-                        orderStatusMap.DaHuy.totalAmount += order.tongtien;
+                        orderStatusMap.DaHuy.count++;
+                        orderStatusMap.DaHuy.totalAmountOnline += order.tongtien;
                         break;
                     case 1: // Chờ xác nhận
-                        orderStatusMap.ChoXacNhan.totalAmount += order.tongtien;
+                        orderStatusMap.ChoXacNhan.count++;
+                        orderStatusMap.ChoXacNhan.totalAmountOnline += order.tongtien;
                         break;
                     case 2: // Đã xác nhận
-                        orderStatusMap.DaXacNhan.totalAmount += order.tongtien;
+                        orderStatusMap.DaXacNhan.count++;
+                        orderStatusMap.DaXacNhan.totalAmountOnline += order.tongtien;
                         break;
                     case 3: // Đang vận chuyển
-                        orderStatusMap.DangVanChuyen.totalAmount += order.tongtien;
+                        orderStatusMap.DangVanChuyen.count++;
+                        orderStatusMap.DangVanChuyen.totalAmountOnline += order.tongtien;
                         break;
                     case 4: // Đang giao hàng
-                        orderStatusMap.DangGiaoHang.totalAmount += order.tongtien;
+                        orderStatusMap.DangGiaoHang.count++;
+                        orderStatusMap.DangGiaoHang.totalAmountOnline += order.tongtien;
+                        break;
+                }
+            } else { // Nếu tt_online không phải 1 thì cộng vào tt_cod
+                switch (order.trangthai) {
+                    case 0: // Đã hủy
+                        orderStatusMap.DaHuy.count++;
+                        orderStatusMap.DaHuy.totalAmountCod += order.tongtien;
+                        break;
+                    case 1: // Chờ xác nhận
+                        orderStatusMap.ChoXacNhan.count++;
+                        orderStatusMap.ChoXacNhan.totalAmountCod += order.tongtien;
+                        break;
+                    case 2: // Đã xác nhận
+                        orderStatusMap.DaXacNhan.count++;
+                        orderStatusMap.DaXacNhan.totalAmountCod += order.tongtien;
+                        break;
+                    case 3: // Đang vận chuyển
+                        orderStatusMap.DangVanChuyen.count++;
+                        orderStatusMap.DangVanChuyen.totalAmountCod += order.tongtien;
+                        break;
+                    case 4: // Đang giao hàng
+                        orderStatusMap.DangGiaoHang.count++;
+                        orderStatusMap.DangGiaoHang.totalAmountCod += order.tongtien;
                         break;
                 }
             }
         });
 
-        // Trả về tổng tiền theo trạng thái
+        // Trả về tổng tiền online và cod theo trạng thái
         res.json({ success: true, data: orderStatusMap });
     } catch (error) {
-        console.error('Lỗi khi lấy tổng tiền theo trạng thái:', error);
+        console.error('Lỗi khi lấy danh sách đơn hàng theo trạng thái:', error);
         res.status(500).json({ success: false, message: 'Lỗi máy chủ' });
     }
 };
+
 
 
 const filterOrdersByDate = async (req, res) => {
