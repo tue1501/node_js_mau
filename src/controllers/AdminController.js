@@ -106,7 +106,7 @@ export const getSummaryStatistics = async (req, res) => {
         const [revenueRows] = await connection.execute(
             `SELECT SUM(tongtien) AS totalRevenue 
              FROM donhang 
-             WHERE ngaygiaohang BETWEEN ? AND ? AND trangthai = 4`,
+             WHERE ngaytao BETWEEN ? AND ? AND trangthai IN (1, 2, 3, 4)`,
             [startStr, endStr]
         );
         const monthlyRevenue = revenueRows[0].totalRevenue || 0;
