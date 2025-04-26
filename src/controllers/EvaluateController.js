@@ -176,7 +176,52 @@ const getallEvaluate = async (req, res) => {
     }
 };
 
+const detailevaluate = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Kiểm tra xem id có hợp lệ không
+        if (!id) {
+            return res.status(400).json({ message: "Thiếu ID đánh giá" });
+        }
+
+        // Truy vấn lấy chi tiết đánh giá theo id
+        const [rows] = await connection.execute(
+            `SELECT 
+                d.id, 
+                d.idMau, 
+                d.noidung, 
+                d.traloi, 
+                d.diem, 
+                d.ngaydanhgia, 
+                d.ngaytraloi, 
+                k.hoten AS hoten, 
+                q.hoten AS hotenqtv, 
+                m.tenMau, 
+                s.tenSP AS tensp,
+                COALESCE(m.hinhanh, s.hinhanh) AS hinhanh
+            FROM danhgia d
+            JOIN khachhang k ON d.idKhachHang = k.idKhachHang
+            LEFT JOIN qtv q ON d.idQtv = q.idQtv
+            JOIN sanpham_mau_hinhanh m ON d.idMau = m.id
+            JOIN sanpham s ON m.idSanPham = s.idSanPham  
+            WHERE d.id = ?;`,
+            [id]
+        );        
+
+        // Nếu không có đánh giá nào
+        if (rows.length === 0) {
+            return res.status(404).json({ message: "Không có đánh giá nào cho màu này" });
+        }
+
+        // Trả về kết quả
+        res.status(200).json(rows[0]);
+    } catch (error) {
+        console.error("Lỗi khi lấy đánh giá:", error);
+        res.status(500).json({ message: "Lỗi server" });
+    }
+}
 
 export default {
-    getEvaluate,addEvaluate,getEvaluateByIdMau,getallEvaluate
+    getEvaluate,addEvaluate,getEvaluateByIdMau,getallEvaluate,detailevaluate
 };

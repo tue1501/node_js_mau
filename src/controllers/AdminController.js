@@ -7,7 +7,8 @@ const repcomment = async (req, res) => {
     try {
         // Lấy id từ URL params
         const { id } = req.params;
-        const idQtv = req.admin.id; // Giả sử req.admin được gán từ middleware
+        const idQtv = req.admin.id; 
+        console.log('idQtv', idQtv);
         const { traloi } = req.body;
 
         const ngaytraloi = new Date().toISOString().slice(0, 19).replace('T', ' '); // Định dạng YYYY-MM-DD HH:MM:SS
@@ -78,9 +79,10 @@ const repcomment = async (req, res) => {
             const title = 'Trả lời đánh giá';
             const body = `Đánh giá của bạn đã được trả lời: ${traloi}`;
             const idKhachHang = danhGia.idKhachHang;
+            console.log('wdwda', id);
             await connection.execute(
-                'INSERT INTO thongbao (tieude, noidung, idKhachHang, trangthai) VALUES (?, ?, ?, ?)',
-                [title, body, idKhachHang, 1]
+                'INSERT INTO thongbao (tieude, noidung, idKhachHang, trangthai ,idDanhGia) VALUES (?, ?, ?, ?, ?)',
+                [title, body, idKhachHang, 1, id]
             );
         }
 

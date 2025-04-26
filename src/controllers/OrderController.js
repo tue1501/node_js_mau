@@ -371,8 +371,8 @@ const updateorder = async (req, res) => {
             }
 
             await connection.execute(
-                'INSERT INTO thongbao (tieude, noidung, idKhachHang, trangthai) VALUES (?, ?, ?, ?)',
-                [notifyTitle, notifyBody, idKhachHang, 1]
+                'INSERT INTO thongbao (tieude, noidung, idKhachHang, trangthai,idDonHang) VALUES (?, ?, ?, ?   , ?)',
+                [notifyTitle, notifyBody, idKhachHang, 1,id]
             );
         }
 
