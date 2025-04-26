@@ -373,10 +373,10 @@ const updateorder = async (req, res) => {
         if (allTokens.length > 0) {
             const notifyTitle = 'Thông báo đơn hàng';
             const statusMap = {
-                0: 'đang chờ duyệt đơn',
-                1: 'đã duyệt đơn',
-                2: 'đang giao hàng',
-                3: 'đã nhận hàng'
+                0: 'Chờ xác nhận',
+                1: 'Đã xác nhận',
+                2: 'Đang giao hàng',
+                3: 'Đã giao hàng'
             };   
             const notifyBody = `Đơn hàng ${id} đã được cập nhật trạng thái: ${statusMap[newTrangThai]}`;            
             for (const token of allTokens) {
