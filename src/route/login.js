@@ -3,7 +3,7 @@ import LoginController from '../controllers/LoginController.js';
 import authenticateJWT from '../middleware/authenticate.js';
 import authenticateJWTadmin from '../middleware/authenticatead.js';
 import checkSuperAdmin from '../middleware/checkSuperAdmin.js';
-
+import authenticateJWTadminoruser from '../middleware/authenticateaduser.js';
 const router = express.Router()
 const setupRoutes = (app) => {
 
@@ -29,7 +29,7 @@ const setupRoutes = (app) => {
     
     router.get('/discountbyid',authenticateJWT, LoginController.discountbyid);
 
-    router.get('/logout', authenticateJWT, LoginController.logout);
+    router.get('/logout', authenticateJWTadminoruser, LoginController.logout);
 
     router.post('/add-admin',authenticateJWTadmin,checkSuperAdmin,LoginController.addAdmin);
 

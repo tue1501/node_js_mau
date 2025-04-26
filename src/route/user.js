@@ -18,7 +18,7 @@ const User = (app) => {
     // Route to update user information
     router.put('/users/:id', authenticateJWTadminoruser,UserController.updateUser);
 
-    return app.use('/api', router);
+    return app.use('/api', router); 
 }
 
 export default User;
