@@ -9,6 +9,7 @@ const Notification = (app) => {
     router.post('/deleteNotification/:id',authenticateJWT, NotificationController.deleteNotification);
     router.post('/sendNotification', NotificationController.sendNotificationToUser);
     router.post('/deletetokenbyid',authenticateJWT, NotificationController.deletetokenbyid);
+    router.get('/detailNotification/:id',authenticateJWT, NotificationController.detailNotification);
     return app.use('/api', router);
 }
 

@@ -21,6 +21,32 @@ const getNotification = async (req, res) => {
         return res.status(500).json({ message: 'Lỗi server', error });
     }
 };
+
+const detailNotification = async (req, res) => {
+    const { id } = req.params;
+    try {
+        if (!id) {
+            return res.status(400).json({ message: 'Thiếu ID thông báo' });
+        }
+
+        const [rows] = await connection.execute(
+            'SELECT * FROM thongbao WHERE id = ?',
+            [id]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy thông báo' });
+        }
+
+        return res.status(200).json({ data: rows[0] });
+    } catch (error) {
+        console.error('Lỗi khi lấy thông báo:', error);
+        return res.status(500).json({ message: 'Lỗi server', error });
+    }
+}
+
+
+
 const updateNotification = async (req, res) => {
     const { idThongBao } = req.body;
     
@@ -170,5 +196,5 @@ const sendNotificationToUser = async (req, res) => {
 
 
 
-export default { getNotification, updateNotification, sendNotificationToUser, deleteNotification, deletetokenbyid };
+export default { getNotification, updateNotification, sendNotificationToUser, deleteNotification, deletetokenbyid,detailNotification };
   

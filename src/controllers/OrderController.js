@@ -355,8 +355,13 @@ const updateorder = async (req, res) => {
         // Gửi thông báo
         if (allTokens.length > 0) {
             const notifyTitle = 'Thông báo đơn hàng';
-            const notifyBody = `Đơn hàng ${id} đã được cập nhật trạng thái`;
-
+            const statusMap = {
+                1: 'đang chờ duyệt đơn',
+                2: 'đã duyệt đơn',
+                3: 'đang giao hàng',
+                4: 'đã nhận hàng'
+            };   
+            const notifyBody = `Đơn hàng ${id} đã được cập nhật trạng thái: ${statusMap[newTrangThai]}`;            
             for (const token of allTokens) {
                 await sendNotification({
                     title: notifyTitle,
