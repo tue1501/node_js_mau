@@ -374,8 +374,6 @@ const updateorder = async (req, res) => {
                 'INSERT INTO thongbao (tieude, noidung, idKhachHang, trangthai) VALUES (?, ?, ?, ?)',
                 [notifyTitle, notifyBody, idKhachHang, 1]
             );
-
-            console.log(`✔ Đã lưu 1 bản ghi thông báo vào DB cho khách hàng ID ${idKhachHang}`);
         }
 
         return res.status(200).json({ message: 'Order updated successfully', newTrangThai });

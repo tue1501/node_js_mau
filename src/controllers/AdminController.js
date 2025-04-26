@@ -73,7 +73,15 @@ const repcomment = async (req, res) => {
                     body: `Đánh giá của bạn đã được trả lời: ${traloi}`,
                     token: token
                 });
+                 
             }
+            const title = 'Trả lời đánh giá';
+            const body = `Đánh giá của bạn đã được trả lời: ${traloi}`;
+            const idKhachHang = danhGia.idKhachHang;
+            await connection.execute(
+                'INSERT INTO thongbao (tieude, noidung, idKhachHang, trangthai) VALUES (?, ?, ?, ?)',
+                [title, body, idKhachHang, 1]
+            );
         }
 
         return res.status(200).json({
