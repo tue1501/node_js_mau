@@ -3,6 +3,7 @@ import ProductController from '../controllers/ProductController.js';
 import authenticateJWT from '../middleware/authenticate.js';
 import verifyToken from '../middleware/authenticate.js';
 import authenticateJWTphone from '../middleware/authenticatephone.js';
+import authenticateJWTadminoruser from '../middleware/authenticateaduser.js';
 import upload from '../middleware/upload.js';
 import { uploadMultiple } from "../middleware/upload.js"; // Import middleware
 
@@ -12,15 +13,15 @@ const initAPiRouter = (app) => {
 
     router.post('/add-product', uploadMultiple, ProductController.addProduct);
 
-    router.get('/producttype',authenticateJWT,ProductController.producttype)
+    router.get('/producttype',authenticateJWTadminoruser,ProductController.producttype)
 
-    router.get('/producttypedetails/',authenticateJWT,ProductController.producttypedetails)
+    router.get('/producttypedetails/',authenticateJWTadminoruser,ProductController.producttypedetails)
 
-    router.get('/getallProductsByDetailType',authenticateJWT, ProductController.allgetProductsByDetailType);
+    router.get('/getallProductsByDetailType',authenticateJWTadminoruser, ProductController.allgetProductsByDetailType);
 
-    router.get('/getProductsByDetailType/:id',authenticateJWT, ProductController.getProductsByDetailType);
+    router.get('/getProductsByDetailType/:id',authenticateJWTadminoruser, ProductController.getProductsByDetailType);
 
-    router.get('/getProductById/:id',authenticateJWT, ProductController.getProductById);
+    router.get('/getProductById/:id',authenticateJWTadminoruser, ProductController.getProductById);
 
     router.post('/send-sms', ProductController.sendOtp);
 
@@ -28,13 +29,13 @@ const initAPiRouter = (app) => {
 
     router.post('/change-password',authenticateJWTphone,ProductController.changePassword);
 
-    router.post('/addProductType',  authenticateJWT,ProductController.addProductType);
+    router.post('/addProductType',  authenticateJWTadminoruser,ProductController.addProductType);
 
-    router.post('/addProductTypeDetail',  authenticateJWT,ProductController.addProductTypeDetail);
+    router.post('/addProductTypeDetail',  authenticateJWTadminoruser,ProductController.addProductTypeDetail);
 
-    router.put('/updateProductType/:id', authenticateJWT,ProductController.updateProductType);
+    router.put('/updateProductType/:id', authenticateJWTadminoruser,ProductController.updateProductType);
 
-    router.put('/updateProductTypeDetail/:id', authenticateJWT,ProductController.updateProductTypeDetail);
+    router.put('/updateProductTypeDetail/:id', authenticateJWTadminoruser,ProductController.updateProductTypeDetail);
 
     router.put('/updateProduct/:idSanPham', uploadMultiple, ProductController.updateProduct);
 
@@ -44,9 +45,9 @@ const initAPiRouter = (app) => {
 
     router.post('/search', ProductController.search);
 
-    router.put('/updatecolor/:id', authenticateJWT,uploadMultiple,ProductController.updateProductcolor);
+    router.put('/updatecolor/:id', authenticateJWTadminoruser,uploadMultiple,ProductController.updateProductcolor);
 
-    router.post('/createProductColor', authenticateJWT,uploadMultiple,ProductController.createProductColor);
+    router.post('/createProductColor', authenticateJWTadminoruser,uploadMultiple,ProductController.createProductColor);
 
     return app.use('/api', router);
 }
