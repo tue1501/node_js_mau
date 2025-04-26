@@ -9,7 +9,7 @@ import { uploadMultiple } from "../middleware/upload.js"; // Import middleware
 
 const router = express.Router();
 const initAPiRouter = (app) => {
-    router.get('/product',[authenticateJWT,verifyToken],ProductController.getAllproduct)
+    router.get('/product',authenticateJWTadminoruser,ProductController.getAllproduct)
 
     router.post('/add-product', uploadMultiple, ProductController.addProduct);
 
