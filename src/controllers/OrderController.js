@@ -203,8 +203,8 @@ const getOrderById = async (req, res) => {
         const [orders] = await connection.execute(
             `SELECT dh.*, kh.*,gg.*
             FROM donhang dh
-            JOIN khachhang kh ON dh.idKhachHang = kh.idKhachHang 
-            JOIN giamgia gg ON dh.idGiamGia = gg.idGiamGia
+            JOIN khachhang kh ON dh.idKhachHang = kh.idKhachHang  
+            LEFT JOIN giamgia gg ON dh.idGiamGia = gg.idGiamGia           
             WHERE dh.iddonhang = ?`,
             [id]
         );
