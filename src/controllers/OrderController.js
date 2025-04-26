@@ -119,6 +119,23 @@ const deleteorder = async (req, res) => {
         // Bắt đầu transaction để đảm bảo tính toàn vẹn
         await connection.beginTransaction();
 
+        // Lấy danh sách sản phẩm trong đơn hàng
+        const [products] = await connection.query(
+            `SELECT idMau, sl FROM chitietdonhang WHERE idDonHang = ?`,
+            [iddonhang]
+        );
+
+        // Cập nhật lại số lượng trong bảng sanpham_mau_soluong
+        for (const product of products) {
+            const { idMau, sl } = product;
+            const updateQuantityQuery = `
+                UPDATE sanpham_mau_hinhanh
+                SET so_luong = so_luong + ?
+                WHERE id = ?
+            `;
+            await connection.execute(updateQuantityQuery, [sl, idMau]);
+        }
+
         // Cập nhật trạng thái đơn hàng thành 4
         const updateOrderQuery = `
             UPDATE donhang 
@@ -148,7 +165,7 @@ const deleteorder = async (req, res) => {
 
         // Commit transaction
         await connection.commit();
-        return res.status(200).json({ message: 'Order updated successfully' });
+        return res.status(200).json({ message: 'Order updated successfully and product quantities restored' });
     } catch (error) {
         // Rollback nếu có lỗi
         await connection.rollback();
