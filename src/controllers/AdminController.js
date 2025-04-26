@@ -76,15 +76,15 @@ const repcomment = async (req, res) => {
                 });
                  
             }
-            const title = 'Trả lời đánh giá';
-            const body = `Đánh giá của bạn đã được trả lời: ${traloi}`;
-            const idKhachHang = danhGia.idKhachHang;
-            console.log('wdwda', id);
-            await connection.execute(
-                'INSERT INTO thongbao (tieude, noidung, idKhachHang, trangthai ,idDanhGia) VALUES (?, ?, ?, ?, ?)',
-                [title, body, idKhachHang, 1, id]
-            );
         }
+        const title = 'Trả lời đánh giá';
+        const body = `Đánh giá của bạn đã được trả lời: ${traloi}`;
+        const idKhachHang = danhGia.idKhachHang;
+        console.log('wdwda', id);
+        await connection.execute(
+            'INSERT INTO thongbao (tieude, noidung, idKhachHang, trangthai ,idDanhGia) VALUES (?, ?, ?, ?, ?)',
+            [title, body, idKhachHang, 1, id]
+        );
 
         return res.status(200).json({
             message: 'Phản hồi đã được gửi thành công!',
