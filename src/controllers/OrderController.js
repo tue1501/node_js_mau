@@ -201,9 +201,10 @@ const getOrderById = async (req, res) => {
     try {
         // Lấy thông tin đơn hàng theo ID
         const [orders] = await connection.execute(
-            `SELECT dh.*, kh.*
+            `SELECT dh.*, kh.*,gg.*
             FROM donhang dh
-            JOIN khachhang kh ON dh.idKhachHang = kh.idKhachHang
+            JOIN khachhang kh ON dh.idKhachHang = kh.idKhachHang 
+            JOIN giamgia gg ON dh.idGiamGia = gg.idGiamGia
             WHERE dh.iddonhang = ?`,
             [id]
         );
@@ -246,8 +247,8 @@ const getOrderById = async (req, res) => {
             moTa: order.mota,
             giamGia: order.giamgia,
             dangGiamGia: order.danggiamgia,
-            giamIn: order.giamin,
-            giamAx: order.giamax,
+            giamin: order.giamin,
+            giamax: order.giamax,
             soLuong: order.soluong,
             ghichu: order.ghichu, // Lấy ghi chú từ bảng donhang
             noinhan: order.noinhan,
