@@ -3,8 +3,7 @@ import { jwtBlacklist } from './jwtBlacklist.js'; // Import blacklist từ jwtBl
 import connection from '../config/database.js'
 import dotenv from 'dotenv';
 dotenv.config();
-
-const authenticateJWTadmin = async (req, res, next) => {
+const authenticateJWTadminoruser = async (req, res, next) => {
     const token = req.header('Authorization')?.split(' ')[1];  // Lấy token từ header Authorization
 
     if (!token) {
@@ -18,29 +17,29 @@ const authenticateJWTadmin = async (req, res, next) => {
         if (jwtBlacklist.has(token)) {
             return res.status(403).json({ success: false, message: 'Token is blacklisted' });
         }
-
         // Kiểm tra id của người dùng
-        if (!decoded.idad) {
+        if (!decoded.id && !decoded.idad) {
             return res.status(400).json({ success: false, message: 'Invalid token, user ID missing' });
         }
-        const userId = decoded.idad;  // Lấy id từ token đã giải mã
-        // Truy vấn để lấy quyền của admin
-        const [rows] = await connection.execute(
-            `SELECT q.idQuyen 
-                FROM qtv AS qtv
-                JOIN quyen AS q ON qtv.idQuyen = q.idQuyen
-                WHERE qtv.idQtv = ?`,
-            [userId]
-        );
-        if (rows.idQuyen === 3 ) {
-            return res.status(403).json({ success: false,message: 'cút' });
+        if (decoded.idad) {
+            const [rows] = await connection.execute(
+                `SELECT q.idQuyen 
+                    FROM qtv AS qtv
+                    JOIN quyen AS q ON qtv.idQuyen = q.idQuyen
+                    WHERE qtv.idQtv = ?`,
+                [decoded.idad]
+            );
+            if (rows.length === 0 || rows[0].idQuyen === 3) {
+                return res.status(403).json({ success: false, message: 'cút' });
+            }
+            req.admin = decoded;
         }
-        req.admin = decoded;  // Gán thông tin người dùng vào req.user để sử dụng trong các route
+        if (decoded.id) {
+            req.user = decoded;  // Gán thông tin người dùng vào req.user để sử dụng trong các route
+        }
         next();  // Tiếp tục xử lý yêu cầu
     } catch (err) {
         return res.status(401).json({ success: false, message: 'Invalid or expired token' });
     }
 };
-
-export default authenticateJWTadmin; 
-
+export default authenticateJWTadminoruser; 

@@ -435,7 +435,7 @@ const LoginQtv = async (req, res) => {
 
         // Tạo JWT token cho quản trị viên
         const token = jwt.sign(
-            { id: qtv.idQtv },  // Payload chứa idQtv
+            { idad: qtv.idQtv },  // Payload chứa idQtv
             process.env.JWT_SECRET,  // Khóa bí mật
             { expiresIn: '7d' }  // Token hết hạn sau 7 ngày
         );
@@ -571,7 +571,7 @@ const addtoken = async (req, res) => {
 const checktonken = async (req, res) => {
     try {
         const token = req.header('Authorization')?.split(' ')[1]; // Lấy token từ header Authorization
-        const id = req.admin.id; // Lấy ID từ token đã giải mã
+        const id = req.admin.idad; // Lấy ID từ token đã giải mã
         if (!token) {
             return res.status(400).json({ success: false, message: 'Token missing' });
         }

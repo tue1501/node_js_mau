@@ -7,7 +7,7 @@ const repcomment = async (req, res) => {
     try {
         // Lấy id từ URL params
         const { id } = req.params;
-        const idQtv = req.admin.id; 
+        const idQtv = req.admin.idad; 
         console.log('idQtv', idQtv);
         const { traloi } = req.body;
 
@@ -188,7 +188,7 @@ const updateAdmin = async (req, res) => {
 
         // Kiểm tra xem admin có đang cố gắng sửa quyền của chính mình không
         
-        if (id == req.admin.id && idQuyen !== undefined) {
+        if (id == req.admin.idad && idQuyen !== undefined) {
             return res.status(403).json({ message: 'Bạn không thể sửa quyền của chính mình!' });
         }
         // Cập nhật admin

@@ -2,6 +2,7 @@ import express from "express";
 import OrderController from '../controllers/OrderController.js';
 import authenticateJWT from '../middleware/authenticate.js';
 import authenticateJWTadmin from '../middleware/authenticatead.js';
+import authenticateJWTadminoruser from '../middleware/authenticateaduser.js';
 const router = express.Router();
 const OrderRoutes = (app) => {
 
@@ -13,7 +14,7 @@ const OrderRoutes = (app) => {
     router.get('/ordersall' , authenticateJWTadmin,OrderController.getAllOrders);
 
     // Route to get order details by order ID
-    router.get('/orders/:id', OrderController.getOrderById);
+    router.get('/orders/:id', authenticateJWTadminoruser,OrderController.getOrderById);
 
     // Route to get order details by order ID
     router.get('/order/:id', authenticateJWT,OrderController.order);
