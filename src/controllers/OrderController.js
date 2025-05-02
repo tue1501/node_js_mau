@@ -331,13 +331,8 @@ const updateorder = async (req, res) => {
         }
 
         // Cập nhật trạng thái (và ngaygiaohang nếu trạng thái là 4)
-        let updateQuery = `UPDATE donhang SET trangthai = ? WHERE idDonHang = ?`;
+        let updateQuery = `UPDATE donhang SET trangthai = ? , ngaygiaohang = NOW() WHERE idDonHang = ?`;
         let updateParams = [newTrangThai, id];
-
-        if (newTrangThai === 4) {
-            updateQuery = `UPDATE donhang SET trangthai = ?, ngaygiaohang = NOW() WHERE idDonHang = ?`;
-        }
-
         const [result] = await connection.execute(updateQuery, updateParams);
 
         if (result.affectedRows === 0) {
