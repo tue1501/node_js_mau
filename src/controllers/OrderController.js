@@ -218,6 +218,7 @@ const getOrderById = async (req, res) => {
             p.idSanPham,
             c.idMau,
             c.sl,
+            mh.tenmau,
             p.tensp,
             p.gia,
             p.xuatxu,
