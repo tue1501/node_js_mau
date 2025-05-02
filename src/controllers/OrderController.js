@@ -385,6 +385,10 @@ const updateorder = async (req, res) => {
                     title: notifyTitle,
                     body: notifyBody,
                     token: token,
+                    data: {
+                        idDonHang: id,
+                        trangthai: statusMap[newTrangThai],
+                    }, // ✅ Dữ liệu ẩn kèm theo
                 });
             }
 

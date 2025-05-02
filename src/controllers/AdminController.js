@@ -72,7 +72,11 @@ const repcomment = async (req, res) => {
                 await sendNotification({
                     title: 'Trả lời đánh giá',
                     body: `Đánh giá của bạn đã được trả lời: ${traloi}`,
-                    token: token
+                    token: token,
+                    data: {
+                        id: danhGia.id,
+                        traloi: traloi,
+                    }
                 });
                  
             }
@@ -80,7 +84,6 @@ const repcomment = async (req, res) => {
         const title = 'Trả lời đánh giá';
         const body = `Đánh giá của bạn đã được trả lời: ${traloi}`;
         const idKhachHang = danhGia.idKhachHang;
-        console.log('wdwda', id);
         await connection.execute(
             'INSERT INTO thongbao (tieude, noidung, idKhachHang, trangthai ,idDanhGia) VALUES (?, ?, ?, ?, ?)',
             [title, body, idKhachHang, 1, id]
