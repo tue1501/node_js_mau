@@ -311,9 +311,14 @@ const adddiscount = async (req, res) => {
 
         // Kiểm tra mã giảm giá có tồn tại không và lấy soluong
         const [discount] = await connection.execute(
-            'SELECT idGiamGia, soluong FROM giamgia WHERE tengiamgia = ?',
+            'SELECT idGiamGia, soluong,ngayketthuc  FROM giamgia WHERE tengiamgia = ?',
             [discountcode]
         );
+
+        const now = new Date();
+        const expirationDate = new Date(ngayketthuc);
+        if (expirationDate < now) {
+            return res.status(400).json({ message: 'Discount has already been assigned to this customer' });        }
 
         if (discount.length === 0) {
             return res.status(404).json({ message: 'Discount not found' });
