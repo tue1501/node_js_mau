@@ -314,7 +314,7 @@ const adddiscount = async (req, res) => {
             'SELECT idGiamGia, soluong,ngayketthuc  FROM giamgia WHERE tengiamgia = ?',
             [discountcode]
         );
-
+        const ngayketthuc  = discount[0].ngayketthuc;
         const now = new Date();
         const expirationDate = new Date(ngayketthuc);
         if (expirationDate < now) {
