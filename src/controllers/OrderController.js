@@ -327,7 +327,10 @@ const updateorder = async (req, res) => {
                 return res.status(400).json({ message: 'Order status cannot be less than 0' });
             }
             newTrangThai -= 1;
-        } else {
+        } else if (status === "cancel") {
+            newTrangThai = 4; // Trạng thái hủy đơn hàng
+        }
+        else{
             return res.status(400).json({ message: 'Invalid status value' });
         }
 
